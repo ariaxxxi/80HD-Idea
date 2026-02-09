@@ -55,7 +55,7 @@ function BreathingCursor({ visible }: { visible: boolean }) {
     <AnimatePresence>
       {visible && (
         <motion.span
-          className="inline-block w-[2px] h-[1.1em] ml-0.5 align-middle bg-white"
+          className="inline-block w-[2px] h-[1.1em] align-middle bg-white ml-[2px] mr-[2px]"
           initial={{ opacity: 0 }}
           animate={{ opacity: [0, 1, 0] }}
           exit={{ opacity: 0 }}
