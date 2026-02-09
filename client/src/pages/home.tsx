@@ -321,7 +321,7 @@ export default function Home() {
                 ref={textareaRef}
                 value={inputValue}
                 onChange={handleInputChange}
-                className="w-full bg-transparent text-2xl font-bold text-foreground tracking-tight resize-none outline-none border-none leading-snug"
+                className="w-full bg-transparent text-2xl font-bold text-white tracking-tight resize-none outline-none border-none leading-snug"
                 style={{ minHeight: "3rem" }}
                 autoFocus
                 data-testid="input-composer"
