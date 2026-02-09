@@ -248,9 +248,9 @@ export default function Home() {
           {!isComposer && (
             <motion.div
               className="mb-1"
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.5 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
             >
               <span className="text-base text-muted-foreground font-medium tracking-wide" data-testid="text-greeting">right now</span>
             </motion.div>
@@ -265,6 +265,9 @@ export default function Home() {
               role="button"
               tabIndex={0}
               aria-label={`Tap to start writing: ${currentPrompt}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.5, ease: "easeOut" }}
             >
               <AnimatePresence mode="wait">
                 <motion.div
