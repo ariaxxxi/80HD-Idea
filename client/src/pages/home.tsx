@@ -201,7 +201,7 @@ export default function Home() {
 
   return (
     <div
-      className="relative min-h-[100dvh] w-full overflow-hidden bg-background"
+      className="relative min-h-[100dvh] w-full overflow-hidden bg-black"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
