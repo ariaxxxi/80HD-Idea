@@ -37,8 +37,8 @@ function CharacterAnimation({ text, onComplete }: { text: string; onComplete?: (
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{
-            delay: i * 0.03,
-            duration: 0.4,
+            delay: i * 0.05,
+            duration: 0.5,
             ease: [0.25, 0.46, 0.45, 0.94],
           }}
           onAnimationComplete={i === chars.length - 1 ? onComplete : undefined}
@@ -267,7 +267,7 @@ export default function Home() {
               aria-label={`Tap to start writing: ${currentPrompt}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.5, ease: "easeOut" }}
+              transition={{ delay: 0.1, duration: 0.5, ease: "easeOut" }}
             >
               <AnimatePresence mode="wait">
                 <motion.div
