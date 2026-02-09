@@ -1,0 +1,66 @@
+We are building the seamless transition from **Home State** (Idea Capture) to **Composer State** (Writing).
+
+**Key Behaviors & Animations:**
+
+**1. The "Cold Start" Animation:**
+
+- When the app loads, the main center text ("I'm thinking about") should float in character-by-character .
+- **Motion Physics:**
+    - Each character starts slightly lower (`y: 10px`) and invisible (`opacity: 0`).
+    - They drift up to their final position (`y: 0px`, `opacity: 1`) with a smooth, eased transition.
+    - **Stagger:** Use a very tight stagger (`0.03s` delay between chars) so the sentence flows across the screen like liquid, not like a robot typing.
+- **The Cursor:** It should fade in *after* the text finishes and "breathe" (pulsing opacity) softly.
+
+**2. The "Slot Machine" Refresh:**
+
+- Implement a "Pull Down" gesture on the Home screen.
+- **Motion:** As the user pulls, the main text ("I'm thinking about") should roll down like a mechanical slot machine tumbler to reveal the next prompt (e.g., "I want to build", "I want to learn").
+- **Physics:**
+    - The old text scrolls down and out.
+    - The new text scrolls down and in from the top.
+    - Use a **Heavy Spring** (`stiffness: 300`, `damping: 30`) so it snaps into place with weight. It should feel fast and mechanical, distinct from the soft entry.
+
+**3. The "Focus" Transition (Home -> Composer) - CRITICAL:**
+
+- **Trigger:** User taps the text.
+- **Motion:** The *entire text block* ("Right now," + "I'm thinking about") should move upwards together to a comfortable typing position (top-third of screen).
+- **Behavior:** The text "I'm thinking about" becomes the **active content** of the text area.
+- **Cursor:** The cursor must land automatically at the *end* of the sentence "I'm thinking about" so the user can immediately finish the thought.
+- **Keyboard:** The keyboard slides up, and the background dims slightly.
+
+**4. The "Composer" Micro-interactions (High Fidelity):**
+
+**A. The Starter Chips (Inspiration):**
+
+- **Visuals:** Upon entering the Composer, 3 chips (e.g., "a music loop", "a portfolio piece") should **float in** gently from below (`y: 10px` → `0`, `opacity: 0` → `1`) with a stagger effect.
+- **Tap Interaction:** Tapping a chip appends its text to the input field.
+- **Visibility Logic (Critical):**
+    - **Hide:** As soon as the user types *any* character (input length > prompt length), the chips must `AnimatePresence` **exit** (fade out/scale down).
+    - **Show:** If the user backspaces/deletes everything (returning to the original state), the chips must **float back in**.
+
+**B. The "Input Accessory" Toolbar:**
+
+- **Position:** A fixed toolbar sticky to the bottom of the viewport (simulating resting *on top* of the mobile keyboard).
+    - **The Challenge:** This toolbar must stay **visibly pinned** to the top of the virtual keyboard when the user is typing, just like iMessage or WhatsApp.
+    - **The Fix:**
+        - Use `position: fixed` and `bottom: 0` for the container.
+        - **Crucial:** Add this meta tag to the `index.html` head to ensure the viewport resizes correctly when the keyboard opens:
+        `<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">`
+    - **Layout:**
+        - **Container:** A glassmorphism strip (`backdrop-blur-md`, `bg-white/10`) spanning the full width.
+        - **Z-Index:** Set `z-50` to ensure it floats above all text content.
+        - **Left Element:** The **Magic Sparkle** icon (AI Trigger).
+        - **Right Element:** The **Finish/Plant** button.
+    - **Animation:** When the keyboard slides up, this bar must ride up with it instantly (handled by the browser via the meta tag).
+- **Left Element:** A "Magic Sparkle" icon (AI Trigger).
+- **Right Element:** A "Finish/Plant" button.
+
+**C. The AI Question Flow:**
+
+- **Trigger:** When the user taps the **Magic Sparkle** icon.
+- **Action:** The Starter Chips are replaced by **"Question Chips"** (e.g., "Who is it for?", "What's the twist?").
+- **Mock Logic:** Since we don't have a backend yet, mock 3 relevant questions.
+- **Insertion Logic (The "Answer Stem"):**
+    - **User sees:** Chip says "Who is it for?"
+    - **User taps:** The app inserts **"It is for people who..."** (Note: It inserts the *answer starter*, not the question).
+    - **Cursor:** Move cursor to the end of the inserted text.
