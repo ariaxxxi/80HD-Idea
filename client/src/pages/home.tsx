@@ -4,11 +4,11 @@ import { Sparkles, Leaf } from "lucide-react";
 import bgImage from "@assets/Home_(1)_1770656113412.png";
 
 const PROMPTS = [
-  "I'm thinking about",
-  "I want to build",
-  "I want to learn",
-  "I'm curious about",
-  "I want to create",
+  "i'm thinking about",
+  "i want to build",
+  "i want to learn",
+  "i'm curious about",
+  "i want to create",
 ];
 
 const STARTER_CHIPS = [
@@ -291,7 +291,7 @@ export default function Home() {
                             setShowCursor(true);
                           }
                         }}
-                      >
+                        className="font-medium">
                         {currentPrompt}
                       </motion.span>
                     )}
