@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
 import { Sparkles, Leaf } from "lucide-react";
+import bgImage from "@assets/Home_(1)_1770656113412.png";
 
 const PROMPTS = [
   "I'm thinking about",
@@ -205,18 +206,15 @@ export default function Home() {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <AnimatePresence>
-        {isComposer && (
-          <motion.div
-            className="fixed inset-0 bg-black/20 dark:bg-black/40 z-10"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            data-testid="composer-overlay"
-          />
-        )}
-      </AnimatePresence>
+      <motion.img
+        src={bgImage}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        animate={{ opacity: isComposer ? 0.1 : 1 }}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
+        aria-hidden="true"
+        data-testid="bg-image"
+      />
       <div className="relative z-20 flex flex-col min-h-[100dvh]">
         <AnimatePresence>
           {isComposer && (
