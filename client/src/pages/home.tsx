@@ -252,9 +252,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.5 }}
             >
-              <span className="text-base text-muted-foreground font-medium tracking-wide" data-testid="text-greeting">
-                Right now,
-              </span>
+              <span className="text-base text-muted-foreground font-medium tracking-wide" data-testid="text-greeting">right now</span>
             </motion.div>
           )}
 
