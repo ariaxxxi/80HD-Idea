@@ -276,7 +276,7 @@ export default function Home() {
                   exit={{ y: slotDirection * 40, opacity: 0 }}
                   transition={heavySpring}
                 >
-                  <h1 className="text-3xl font-bold tracking-tight text-foreground leading-tight" data-testid="text-prompt">
+                  <h1 className="text-3xl font-bold tracking-tight text-white leading-tight" data-testid="text-prompt">
                     {!coldStartDone && promptIndex === 0 ? (
                       <CharacterAnimation
                         text={currentPrompt}
