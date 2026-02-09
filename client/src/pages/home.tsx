@@ -341,18 +341,6 @@ export default function Home() {
             </motion.div>
           )}
 
-          {!isComposer && coldStartDone && (
-            <motion.p
-              className="mt-6 text-sm text-muted-foreground"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.8, duration: 0.6 }}
-              data-testid="text-hint"
-            >
-              Tap to start writing
-            </motion.p>
-          )}
-
           <AnimatePresence>
             {isComposer && !hasUserTyped && !showAIChips && (
               <motion.div
