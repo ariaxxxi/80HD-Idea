@@ -54,7 +54,7 @@ function BreathingCursor({ visible }: { visible: boolean }) {
     <AnimatePresence>
       {visible && (
         <motion.span
-          className="inline-block w-[2px] h-[1.1em] bg-primary ml-0.5 align-middle"
+          className="inline-block w-[2px] h-[1.1em] ml-0.5 align-middle bg-[#ffffff]"
           initial={{ opacity: 0 }}
           animate={{ opacity: [0, 1, 0] }}
           exit={{ opacity: 0 }}
@@ -217,7 +217,6 @@ export default function Home() {
           />
         )}
       </AnimatePresence>
-
       <div className="relative z-20 flex flex-col min-h-[100dvh]">
         <AnimatePresence>
           {isComposer && (
