@@ -25,7 +25,7 @@ const QUESTION_CHIPS = [
 
 const heavySpring = { type: "spring" as const, stiffness: 220, damping: 34 };
 const pullMaxDistance = 120;
-const gatherSpring = { type: "spring" as const, stiffness: 70, damping: 22 };
+const gatherSpring = { type: "spring" as const, stiffness: 80, damping: 20 };
 const cursorFadeRange = [0, 20] as const;
 
 type ScatterTarget = {
@@ -39,8 +39,8 @@ function randomRange(min: number, max: number) {
 
 function generateScatterTargets(length: number) {
   return Array.from({ length }, () => ({
-    y: randomRange(20, 150),
-    rotate: randomRange(-150, 150),
+    y: randomRange(10, 60),
+    rotate: randomRange(-15, 15),
   }));
 }
 
@@ -91,17 +91,47 @@ type ScrabbleCharProps = {
   index: number;
   target: ScatterTarget;
   pullY: MotionValue<number>;
+  introActive: boolean;
+  fadeInExtra: boolean;
 };
 
-function ScrabbleChar({ char, index, target, pullY }: ScrabbleCharProps) {
+function ScrabbleChar({ char, index, target, pullY, introActive, fadeInExtra }: ScrabbleCharProps) {
   const y = useTransform(pullY, [0, pullMaxDistance], [0, target.y]);
   const rotate = useTransform(pullY, [0, pullMaxDistance], [0, target.rotate]);
+  const opacity = useTransform(pullY, [0, pullMaxDistance], [1, 0.2]);
+
+  const introProps = introActive
+    ? {
+        initial: { opacity: 0, y: 16 },
+        animate: { opacity: 1, y: 0 },
+        transition: {
+          delay: 0.5 + index * 0.04,
+          duration: 0.5,
+          ease: [0.25, 0.46, 0.45, 0.94],
+        },
+      }
+    : {};
+
+  const extraProps = !introActive && fadeInExtra
+    ? {
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        transition: { duration: 0.4, ease: "easeOut" },
+      }
+    : {};
 
   return (
     <motion.span
       key={`${char}-${index}`}
       className="inline-block font-light"
-      style={{ y, rotate, whiteSpace: char === " " ? "pre" : undefined }}
+      style={{
+        y: introActive ? undefined : y,
+        rotate: introActive ? undefined : rotate,
+        opacity: introActive ? undefined : opacity,
+        whiteSpace: char === " " ? "pre" : undefined,
+      }}
+      {...introProps}
+      {...extraProps}
     >
       {char}
     </motion.span>
@@ -120,6 +150,8 @@ export default function Home() {
   const [scatterTargets, setScatterTargets] = useState<ScatterTarget[]>(
     () => generateScatterTargets(PROMPTS[0].length),
   );
+  const [newCharStartIndex, setNewCharStartIndex] = useState<number | null>(null);
+  const [introActive, setIntroActive] = useState(true);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pullStartY = useRef<number | null>(null);
@@ -163,15 +195,22 @@ export default function Home() {
   const cyclePrompt = useCallback(() => {
     const nextIndex = (promptIndex + 1) % PROMPTS.length;
     const nextPrompt = PROMPTS[nextIndex];
+    const nextLength = nextPrompt.length;
+    const currentLength = scatterTargets.length;
     setSlotDirection(1);
     setShowCursor(false);
     skipScatterSyncRef.current = true;
+    if (nextLength > currentLength) {
+      setNewCharStartIndex(currentLength);
+    } else {
+      setNewCharStartIndex(null);
+    }
     setScatterTargets((prev) => expandScatterTargets(prev, nextPrompt.length));
     setPromptIndex(nextIndex);
     setTimeout(() => {
       setShowCursor(true);
     }, 50);
-  }, [promptIndex]);
+  }, [promptIndex, scatterTargets.length]);
 
   useEffect(() => {
     if (skipScatterSyncRef.current) {
@@ -180,6 +219,12 @@ export default function Home() {
     }
     setScatterTargets(sessionScatterTargets);
   }, [sessionScatterTargets]);
+
+  useEffect(() => {
+    if (newCharStartIndex === null) return;
+    const timeout = setTimeout(() => setNewCharStartIndex(null), 500);
+    return () => clearTimeout(timeout);
+  }, [newCharStartIndex]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (isComposer) return;
@@ -281,6 +326,8 @@ export default function Home() {
 
   useEffect(() => {
     setShowCursor(true);
+    const introTimeout = setTimeout(() => setIntroActive(false), 1400);
+    return () => clearTimeout(introTimeout);
   }, []);
 
   return (
@@ -299,7 +346,7 @@ export default function Home() {
         src={bgImage}
         alt=""
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-        animate={{ opacity: isComposer ? 0.1 : 1 }}
+        animate={{ opacity: isComposer ? 0.2 : 1 }}
         transition={{ duration: 0.4, ease: "easeInOut" }}
         aria-hidden="true"
         data-testid="bg-image"
@@ -342,7 +389,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, ease: "easeOut" }}
             >
-              <span className="text-base text-muted-foreground font-medium tracking-wide" data-testid="text-greeting">right now</span>
+              <span className="text-base text-white font-medium tracking-wide" data-testid="text-greeting">right now</span>
             </motion.div>
           )}
 
@@ -355,9 +402,6 @@ export default function Home() {
               role="button"
               tabIndex={0}
               aria-label={`Tap to start writing: ${currentPrompt}`}
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.9, ease: "easeOut" }}
             >
               <AnimatePresence mode="wait">
                 <div key={promptIndex}>
@@ -367,15 +411,17 @@ export default function Home() {
                     data-testid="text-prompt"
                   >
                     <motion.span className="inline">
-                      {promptChars.map((char, i) => (
-                        <ScrabbleChar
-                          key={`${char}-${i}`}
-                          char={char}
-                          index={i}
-                          target={scatterTargets[i] ?? { y: 0, rotate: 0 }}
-                          pullY={pullY}
-                        />
-                      ))}
+                        {promptChars.map((char, i) => (
+                          <ScrabbleChar
+                            key={`${char}-${i}`}
+                            char={char}
+                            index={i}
+                            target={scatterTargets[i] ?? { y: 0, rotate: 0 }}
+                            pullY={pullY}
+                            introActive={introActive}
+                            fadeInExtra={newCharStartIndex !== null && i >= newCharStartIndex}
+                          />
+                        ))}
                     </motion.span>
                     <BreathingCursor visible={showCursor} opacity={cursorOpacity} />
                   </h1>
@@ -426,7 +472,7 @@ export default function Home() {
                 {STARTER_CHIPS.map((chip) => (
                   <motion.button
                     key={chip}
-                    className="px-3.5 py-2 rounded-md bg-muted text-sm text-muted-foreground font-medium hover-elevate active-elevate-2 transition-colors"
+                    className="px-3.5 py-2 rounded-md bg-white/10 text-sm text-white/60 font-medium hover-elevate active-elevate-2 transition-colors"
                     variants={{
                       hidden: { opacity: 0, y: 10 },
                       visible: { opacity: 1, y: 0 },
@@ -459,7 +505,7 @@ export default function Home() {
                 {QUESTION_CHIPS.map((chip) => (
                   <motion.button
                     key={chip.label}
-                    className="flex items-center gap-2 px-3.5 py-2.5 rounded-md bg-primary/10 text-sm text-primary font-medium text-left hover-elevate active-elevate-2 transition-colors"
+                    className="flex items-center gap-2 px-3.5 py-2.5 rounded-md bg-white/10 text-sm text-white/60 font-medium text-left hover-elevate active-elevate-2 transition-colors"
                     variants={{
                       hidden: { opacity: 0, y: 10 },
                       visible: { opacity: 1, y: 0 },
@@ -469,7 +515,7 @@ export default function Home() {
                     onClick={() => handleQuestionChipTap(chip.stem)}
                     data-testid={`chip-question-${chip.label.replace(/\s+/g, "-")}`}
                   >
-                    <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                    <Sparkles className="w-3.5 h-3.5 shrink-0 text-white/70" />
                     {chip.label}
                   </motion.button>
                 ))}
