@@ -294,7 +294,7 @@ export default function Home() {
                             setShowCursor(true);
                           }
                         }}
-                        className="font-medium">
+                        className="font-light">
                         {currentPrompt}
                       </motion.span>
                     )}
