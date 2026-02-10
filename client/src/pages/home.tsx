@@ -84,6 +84,7 @@ export default function Home() {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pullStartY = useRef<number | null>(null);
+  const isMouseDragging = useRef(false);
   const pullY = useMotionValue(0);
   const pullOpacity = useTransform(pullY, [0, 80], [1, 0.3]);
 
@@ -152,6 +153,32 @@ export default function Home() {
     animate(pullY, 0, { type: "spring", stiffness: 400, damping: 30 });
   }, [isPulling, pullY, cyclePrompt]);
 
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (isComposer) return;
+    pullStartY.current = e.clientY;
+    isMouseDragging.current = true;
+  }, [isComposer]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (isComposer || !isMouseDragging.current || pullStartY.current === null) return;
+    const delta = e.clientY - pullStartY.current;
+    if (delta > 0) {
+      pullY.set(Math.min(delta, 120));
+      if (delta > 30) setIsPulling(true);
+    }
+  }, [isComposer, pullY]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!isMouseDragging.current) return;
+    if (isPulling && pullY.get() > 60) {
+      cyclePrompt();
+    }
+    setIsPulling(false);
+    pullStartY.current = null;
+    isMouseDragging.current = false;
+    animate(pullY, 0, { type: "spring", stiffness: 400, damping: 30 });
+  }, [isPulling, pullY, cyclePrompt]);
+
   const handleChipTap = useCallback((chipText: string) => {
     setInputValue((prev) => {
       const needsSpace = prev.length > 0 && !prev.endsWith(" ");
@@ -206,6 +233,10 @@ export default function Home() {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
     >
       <motion.img
         src={bgImage}
