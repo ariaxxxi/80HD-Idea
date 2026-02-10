@@ -202,6 +202,7 @@ export default function Home() {
   return (
     <div
       className="relative min-h-[100dvh] w-full overflow-hidden bg-black"
+      style={{ touchAction: isComposer ? "auto" : "none" }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
