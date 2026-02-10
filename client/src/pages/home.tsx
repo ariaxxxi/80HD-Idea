@@ -25,8 +25,11 @@ const QUESTION_CHIPS = [
 
 const heavySpring = { type: "spring" as const, stiffness: 220, damping: 34 };
 const pullMaxDistance = 120;
-const gatherSpring = { type: "spring" as const, stiffness: 80, damping: 20 };
+const gatherSpring = { type: "spring" as const, stiffness: 120, damping: 20 };
 const cursorFadeRange = [0, 20] as const;
+const introBaseDelay = 0.5;
+const introStagger = 0.03;
+const introDuration = 0.3;
 
 type ScatterTarget = {
   y: number;
@@ -69,7 +72,7 @@ function BreathingCursor({ visible, opacity }: BreathingCursorProps) {
           exit={{ opacity: 0 }}
         >
           <motion.span
-            className="inline-block w-[2px] h-[1.1em] align-middle bg-white ml-[2px] mr-[2px]"
+            className="inline-block w-[2px] h-[1.1em] align-middle bg-white ml-[3px] mr-[2px] -translate-y-[2px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: [0, 1, 0] }}
             transition={{
@@ -105,8 +108,8 @@ function ScrabbleChar({ char, index, target, pullY, introActive, fadeInExtra }: 
         initial: { opacity: 0, y: 16 },
         animate: { opacity: 1, y: 0 },
         transition: {
-          delay: 0.5 + index * 0.04,
-          duration: 0.5,
+          delay: introBaseDelay + index * introStagger,
+          duration: introDuration,
           ease: [0.25, 0.46, 0.45, 0.94],
         },
       }
@@ -152,6 +155,7 @@ export default function Home() {
   );
   const [newCharStartIndex, setNewCharStartIndex] = useState<number | null>(null);
   const [introActive, setIntroActive] = useState(true);
+  const [lockedHeight, setLockedHeight] = useState<number | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pullStartY = useRef<number | null>(null);
@@ -209,7 +213,7 @@ export default function Home() {
     setPromptIndex(nextIndex);
     setTimeout(() => {
       setShowCursor(true);
-    }, 50);
+    }, 600);
   }, [promptIndex, scatterTargets.length]);
 
   useEffect(() => {
@@ -325,15 +329,78 @@ export default function Home() {
   }, [inputValue]);
 
   useEffect(() => {
-    setShowCursor(true);
-    const introTimeout = setTimeout(() => setIntroActive(false), 1400);
-    return () => clearTimeout(introTimeout);
+    if (!isComposer) return;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyPosition = document.body.style.position;
+    const previousBodyWidth = document.body.style.width;
+    const previousBodyTop = document.body.style.top;
+    const scrollY = window.scrollY;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+    document.body.style.top = `-${scrollY}px`;
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.position = previousBodyPosition;
+      document.body.style.width = previousBodyWidth;
+      document.body.style.top = previousBodyTop;
+      window.scrollTo(0, scrollY);
+    };
+  }, [isComposer]);
+
+  useEffect(() => {
+    if (!isComposer) return;
+    const preventTouchMove = (event: TouchEvent) => {
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+    };
+    document.addEventListener("touchmove", preventTouchMove, { passive: false });
+    return () => {
+      document.removeEventListener("touchmove", preventTouchMove);
+    };
+  }, [isComposer]);
+
+  useEffect(() => {
+    if (!isComposer) {
+      setLockedHeight(null);
+      return;
+    }
+    setLockedHeight(window.innerHeight);
+  }, [isComposer]);
+
+  useEffect(() => {
+    const previousBackground = document.body.style.backgroundColor;
+    document.body.style.backgroundColor = "#000";
+    return () => {
+      document.body.style.backgroundColor = previousBackground;
+    };
   }, []);
+
+  useEffect(() => {
+    const introTotalMs =
+      (introBaseDelay +
+        Math.max(promptChars.length - 1, 0) * introStagger +
+        introDuration) *
+      1000;
+    const introTimeout = setTimeout(() => {
+      setIntroActive(false);
+      setShowCursor(true);
+    }, introTotalMs);
+    return () => clearTimeout(introTimeout);
+  }, [promptChars.length]);
 
   return (
     <div
-      className="relative min-h-[100dvh] w-full overflow-hidden bg-black"
-      style={{ touchAction: isComposer ? "auto" : "none" }}
+      className={`relative w-full overflow-hidden bg-black ${isComposer ? "" : "min-h-[100dvh]"}`}
+      style={{
+        touchAction: isComposer ? "auto" : "none",
+        height: isComposer && lockedHeight ? `${lockedHeight}px` : isComposer ? "100vh" : undefined,
+        overscrollBehavior: isComposer ? "none" : undefined,
+      }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -346,7 +413,7 @@ export default function Home() {
         src={bgImage}
         alt=""
         className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-        animate={{ opacity: isComposer ? 0.2 : 1 }}
+        animate={{ opacity: 0 }}
         transition={{ duration: 0.4, ease: "easeInOut" }}
         aria-hidden="true"
         data-testid="bg-image"
@@ -372,24 +439,17 @@ export default function Home() {
         </AnimatePresence>
 
         <motion.div
-          className="flex-1 flex flex-col px-6"
-          initial={{ paddingTop: "40vh" }}
-          style={!isComposer ? { opacity: pullOpacity } : {}}
-          animate={{
-            paddingTop: isComposer ? "4.5rem" : "40vh",
-          }}
-          transition={{
-            paddingTop: { type: "spring", stiffness: 200, damping: 28 },
-          }}
+          className={`flex-1 flex flex-col items-start ${isComposer ? "" : "px-[30px] justify-center"}`}
+          style={isComposer ? { y: 0 } : { opacity: pullOpacity }}
         >
           {!isComposer && (
             <motion.div
               className="mb-1"
-              initial={{ opacity: 0, y: 40 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, ease: "easeOut" }}
+              transition={{ duration: 0.5 }}
             >
-              <span className="text-base text-white font-medium tracking-wide" data-testid="text-greeting">right now</span>
+              <span className="text-white text-[16px] font-medium leading-[120%] tracking-[-0.16px]" data-testid="text-greeting">right now</span>
             </motion.div>
           )}
 
@@ -406,7 +466,7 @@ export default function Home() {
               <AnimatePresence mode="wait">
                 <div key={promptIndex}>
                   <h1
-                    className="text-3xl font-light tracking-tight text-white leading-tight"
+                    className="text-[32px] font-light text-white leading-[120%] tracking-[-0.32px] flex items-center"
                     style={{ fontFamily: "'Roboto Serif', serif" }}
                     data-testid="text-prompt"
                   >
@@ -431,22 +491,23 @@ export default function Home() {
           ) : (
             <motion.div
               layout
-              className="relative"
+              className="relative z-10 pt-[117px] px-[30px]"
               initial={false}
             >
               <motion.span
-                className="block text-sm text-muted-foreground font-medium mb-2 tracking-wide"
+                className="block text-white text-[14px] font-medium leading-[120%] tracking-[-0.14px] mb-1"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
+                style={{ fontFamily: "'DM Sans', sans-serif" }}
               >
-                Right now,
+                right now
               </motion.span>
               <textarea
                 ref={textareaRef}
                 value={inputValue}
                 onChange={handleInputChange}
-                className="w-full bg-transparent text-2xl font-light text-white tracking-tight resize-none outline-none border-none leading-snug"
+                className="w-full bg-transparent text-white text-[24px] font-normal leading-[120%] tracking-[-0.24px] border-none outline-none resize-none overflow-hidden touch-none"
                 style={{ fontFamily: "'Roboto Serif', serif", minHeight: "3rem" }}
                 autoFocus
                 data-testid="input-composer"
@@ -459,7 +520,7 @@ export default function Home() {
           <AnimatePresence>
             {isComposer && !hasUserTyped && !showAIChips && (
               <motion.div
-                className="flex flex-wrap gap-2 mt-5"
+                className="flex flex-col items-center gap-4 mt-10 w-full"
                 initial="hidden"
                 animate="visible"
                 exit="exit"
@@ -472,7 +533,7 @@ export default function Home() {
                 {STARTER_CHIPS.map((chip) => (
                   <motion.button
                     key={chip}
-                    className="px-3.5 py-2 rounded-md bg-white/10 text-sm text-white/60 font-medium hover-elevate active-elevate-2 transition-colors"
+                    className="inline-flex h-12 px-5 items-center justify-center rounded-3xl bg-white/10 hover:bg-white/20 transition-colors"
                     variants={{
                       hidden: { opacity: 0, y: 10 },
                       visible: { opacity: 1, y: 0 },
@@ -482,7 +543,9 @@ export default function Home() {
                     onClick={() => handleChipTap(chip)}
                     data-testid={`chip-starter-${chip.replace(/\s+/g, "-")}`}
                   >
-                    {chip}
+                    <span className="text-white/60 font-medium text-base leading-[150%] tracking-[-0.176px]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                      {chip}
+                    </span>
                   </motion.button>
                 ))}
               </motion.div>
@@ -492,7 +555,7 @@ export default function Home() {
           <AnimatePresence>
             {isComposer && showAIChips && !hasUserTyped && (
               <motion.div
-                className="flex flex-col gap-2 mt-5"
+                className="flex flex-col items-center gap-2 mt-5 w-full"
                 initial="hidden"
                 animate="visible"
                 exit="exit"
@@ -505,7 +568,7 @@ export default function Home() {
                 {QUESTION_CHIPS.map((chip) => (
                   <motion.button
                     key={chip.label}
-                    className="flex items-center gap-2 px-3.5 py-2.5 rounded-md bg-white/10 text-sm text-white/60 font-medium text-left hover-elevate active-elevate-2 transition-colors"
+                    className="inline-flex h-12 px-5 items-center justify-center gap-2 rounded-3xl bg-white/10 hover:bg-white/20 transition-colors"
                     variants={{
                       hidden: { opacity: 0, y: 10 },
                       visible: { opacity: 1, y: 0 },
@@ -515,8 +578,10 @@ export default function Home() {
                     onClick={() => handleQuestionChipTap(chip.stem)}
                     data-testid={`chip-question-${chip.label.replace(/\s+/g, "-")}`}
                   >
-                    <Sparkles className="w-3.5 h-3.5 shrink-0 text-white/70" />
-                    {chip.label}
+                    <Sparkles className="w-3.5 h-3.5 shrink-0 text-white" />
+                    <span className="text-white/60 font-medium text-base italic leading-[150%] tracking-[-0.176px]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                      {chip.label}
+                    </span>
                   </motion.button>
                 ))}
               </motion.div>
