@@ -277,7 +277,7 @@ export default function Home() {
                   exit={{ y: slotDirection * 40, opacity: 0 }}
                   transition={heavySpring}
                 >
-                  <h1 className="text-3xl font-bold tracking-tight text-white leading-tight" data-testid="text-prompt">
+                  <h1 className="text-3xl font-light tracking-tight text-white leading-tight" style={{ fontFamily: "'Roboto Serif', serif" }} data-testid="text-prompt">
                     {!coldStartDone && promptIndex === 0 ? (
                       <CharacterAnimation
                         text={currentPrompt}
@@ -321,8 +321,8 @@ export default function Home() {
                 ref={textareaRef}
                 value={inputValue}
                 onChange={handleInputChange}
-                className="w-full bg-transparent text-2xl font-bold text-white tracking-tight resize-none outline-none border-none leading-snug"
-                style={{ minHeight: "3rem" }}
+                className="w-full bg-transparent text-2xl font-light text-white tracking-tight resize-none outline-none border-none leading-snug"
+                style={{ fontFamily: "'Roboto Serif', serif", minHeight: "3rem" }}
                 autoFocus
                 data-testid="input-composer"
                 aria-label="Write your idea"
