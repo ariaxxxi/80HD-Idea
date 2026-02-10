@@ -23,7 +23,6 @@ const QUESTION_CHIPS = [
   { label: "Why now?", stem: "Now is the right time because " },
 ];
 
-const heavySpring = { type: "spring" as const, stiffness: 220, damping: 34 };
 const pullMaxDistance = 120;
 const gatherSpring = { type: "spring" as const, stiffness: 120, damping: 20 };
 const cursorFadeRange = [0, 20] as const;
@@ -126,17 +125,20 @@ function ScrabbleChar({ char, index, target, pullY, introActive, fadeInExtra }: 
   return (
     <motion.span
       key={`${char}-${index}`}
-      className="inline-block font-light"
+      className="inline-flex font-light"
       style={{
         y: introActive ? undefined : y,
         rotate: introActive ? undefined : rotate,
         opacity: introActive ? undefined : opacity,
-        whiteSpace: char === " " ? "pre" : undefined,
+        willChange: "transform",
+        transform: "translateZ(0)",
+        backfaceVisibility: "hidden",
+        transformStyle: "preserve-3d",
       }}
       {...introProps}
       {...extraProps}
     >
-      {char}
+      {char === " " ? "\u00A0" : char}
     </motion.span>
   );
 }
@@ -148,7 +150,6 @@ export default function Home() {
   const [inputValue, setInputValue] = useState("");
   const [showAIChips, setShowAIChips] = useState(false);
   const [isPulling, setIsPulling] = useState(false);
-  const [slotDirection, setSlotDirection] = useState(1);
   const [pullSession, setPullSession] = useState(0);
   const [scatterTargets, setScatterTargets] = useState<ScatterTarget[]>(
     () => generateScatterTargets(PROMPTS[0].length),
@@ -201,7 +202,6 @@ export default function Home() {
     const nextPrompt = PROMPTS[nextIndex];
     const nextLength = nextPrompt.length;
     const currentLength = scatterTargets.length;
-    setSlotDirection(1);
     setShowCursor(false);
     skipScatterSyncRef.current = true;
     if (nextLength > currentLength) {
@@ -393,13 +393,15 @@ export default function Home() {
     return () => clearTimeout(introTimeout);
   }, [promptChars.length]);
 
+
+
   return (
     <div
-      className={`relative w-full overflow-hidden bg-black ${isComposer ? "" : "min-h-[100dvh]"}`}
+      className="relative w-full h-screen overflow-hidden bg-black"
       style={{
         touchAction: isComposer ? "auto" : "none",
-        height: isComposer && lockedHeight ? `${lockedHeight}px` : isComposer ? "100vh" : undefined,
-        overscrollBehavior: isComposer ? "none" : undefined,
+        height: lockedHeight ? `${lockedHeight}px` : "100vh",
+        overscrollBehavior: "none",
       }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
@@ -418,7 +420,7 @@ export default function Home() {
         aria-hidden="true"
         data-testid="bg-image"
       />
-      <div className="relative z-20 flex flex-col min-h-[100dvh]">
+      <div className="relative z-20 h-full">
         <AnimatePresence>
           {isComposer && (
             <motion.button
@@ -438,156 +440,170 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        <motion.div
-          className={`flex-1 flex flex-col items-start ${isComposer ? "" : "px-[30px] justify-center"}`}
-          style={isComposer ? { y: 0 } : { opacity: pullOpacity }}
-        >
+        <AnimatePresence mode="wait">
           {!isComposer && (
             <motion.div
-              className="mb-1"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+              key="home"
+              className="absolute inset-0 flex flex-col items-start justify-center px-[30px]"
+              style={{ opacity: pullOpacity }}
             >
-              <span className="text-white text-[16px] font-medium leading-[120%] tracking-[-0.16px]" data-testid="text-greeting">right now</span>
-            </motion.div>
-          )}
-
-          {!isComposer ? (
-            <motion.div
-              className="cursor-pointer"
-              onClick={handleTapToCompose}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleTapToCompose(); } }}
-              data-testid="button-compose"
-              role="button"
-              tabIndex={0}
-              aria-label={`Tap to start writing: ${currentPrompt}`}
-            >
-              <AnimatePresence mode="wait">
-                <div key={promptIndex}>
-                  <h1
-                    className="text-[32px] font-light text-white leading-[120%] tracking-[-0.32px] flex items-center"
-                    style={{ fontFamily: "'Roboto Serif', serif" }}
-                    data-testid="text-prompt"
-                  >
-                    <motion.span className="inline">
-                        {promptChars.map((char, i) => (
-                          <ScrabbleChar
-                            key={`${char}-${i}`}
-                            char={char}
-                            index={i}
-                            target={scatterTargets[i] ?? { y: 0, rotate: 0 }}
-                            pullY={pullY}
-                            introActive={introActive}
-                            fadeInExtra={newCharStartIndex !== null && i >= newCharStartIndex}
-                          />
-                        ))}
-                    </motion.span>
-                    <BreathingCursor visible={showCursor} opacity={cursorOpacity} />
-                  </h1>
-                </div>
-              </AnimatePresence>
-            </motion.div>
-          ) : (
-            <motion.div
-              layout
-              className="relative z-10 pt-[117px] px-[30px]"
-              initial={false}
-            >
-              <motion.span
-                className="block text-white text-[14px] font-medium leading-[120%] tracking-[-0.14px] mb-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                style={{ fontFamily: "'DM Sans', sans-serif" }}
+              <motion.div
+                layoutId="right-now"
+                layout="position"
+                transition={{ type: "spring", stiffness: 110, damping: 20 }}
+                className="text-white font-medium leading-[120%] tracking-[-0.16px] mb-1"
+                style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "16px" }}
+                data-testid="text-greeting"
               >
                 right now
-              </motion.span>
-              <textarea
-                ref={textareaRef}
-                value={inputValue}
-                onChange={handleInputChange}
-                className="w-full bg-transparent text-white text-[24px] font-normal leading-[120%] tracking-[-0.24px] border-none outline-none resize-none overflow-hidden touch-none"
-                style={{ fontFamily: "'Roboto Serif', serif", minHeight: "3rem" }}
-                autoFocus
-                data-testid="input-composer"
-                aria-label="Write your idea"
-              />
+              </motion.div>
+
+              <motion.div
+                layoutId="prompt-line"
+                layout="position"
+                transition={{ type: "spring", stiffness: 110, damping: 20 }}
+                className="cursor-pointer"
+                onClick={handleTapToCompose}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleTapToCompose(); } }}
+                data-testid="button-compose"
+                role="button"
+                tabIndex={0}
+                aria-label={`Tap to start writing: ${currentPrompt}`}
+              >
+                <h1
+                  className="text-[32px] font-normal text-white leading-[38.4px] tracking-[0] flex items-start"
+                  style={{
+                    fontFamily: "'Roboto Serif', serif",
+                    fontKerning: "none",
+                    fontVariantLigatures: "none",
+                    letterSpacing: "0px",
+                    willChange: "transform",
+                  }}
+                  data-testid="text-prompt"
+                >
+                  <motion.span className="inline-flex" style={{ gap: 0, whiteSpace: "pre" }}>
+                    {promptChars.map((char, i) => (
+                      <ScrabbleChar
+                        key={i}
+                        char={char}
+                        index={i}
+                        target={scatterTargets[i] ?? { y: 0, rotate: 0 }}
+                        pullY={pullY}
+                        introActive={introActive}
+                        fadeInExtra={newCharStartIndex !== null && i >= newCharStartIndex}
+                      />
+                    ))}
+                  </motion.span>
+                  <BreathingCursor visible={showCursor} opacity={cursorOpacity} />
+                </h1>
+              </motion.div>
             </motion.div>
           )}
 
+          {isComposer && (
+            <motion.div key="composer" className="absolute inset-0">
+              <div className="relative z-10 pt-[117px] px-[30px]">
+                <motion.div
+                  layoutId="right-now"
+                  layout="position"
+                  transition={{ type: "spring", stiffness: 110, damping: 20 }}
+                  className="text-white font-medium leading-[120%] tracking-[-0.14px] mb-1"
+                  style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px" }}
+                >
+                  right now
+                </motion.div>
+                <motion.div
+                  layoutId="prompt-line"
+                  layout="position"
+                  transition={{ type: "spring", stiffness: 110, damping: 20 }}
+                  className="relative"
+                >
+                  <textarea
+                    ref={textareaRef}
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    className="w-full bg-transparent text-white text-[24px] font-normal leading-[120%] tracking-[-0.24px] border-none outline-none resize-none overflow-hidden touch-none"
+                    style={{ fontFamily: "'Roboto Serif', serif" }}
+                    autoFocus
+                    data-testid="input-composer"
+                    aria-label="Write your idea"
+                  />
+                </motion.div>
 
-          <AnimatePresence>
-            {isComposer && !hasUserTyped && !showAIChips && (
-              <motion.div
-                className="flex flex-col items-center gap-4 mt-10 w-full"
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                variants={{
-                  visible: { transition: { staggerChildren: 0.08 } },
-                  exit: { transition: { staggerChildren: 0.04 } },
-                }}
-                data-testid="starter-chips"
-              >
-                {STARTER_CHIPS.map((chip) => (
-                  <motion.button
-                    key={chip}
-                    className="inline-flex h-12 px-5 items-center justify-center rounded-3xl bg-white/10 hover:bg-white/20 transition-colors"
-                    variants={{
-                      hidden: { opacity: 0, y: 10 },
-                      visible: { opacity: 1, y: 0 },
-                      exit: { opacity: 0, scale: 0.9 },
-                    }}
-                    transition={{ duration: 0.25 }}
-                    onClick={() => handleChipTap(chip)}
-                    data-testid={`chip-starter-${chip.replace(/\s+/g, "-")}`}
-                  >
-                    <span className="text-white/60 font-medium text-base leading-[150%] tracking-[-0.176px]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                      {chip}
-                    </span>
-                  </motion.button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <AnimatePresence>
+                  {isComposer && !hasUserTyped && !showAIChips && (
+                    <motion.div
+                      className="flex flex-col items-center gap-4 mt-10 w-full"
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      variants={{
+                        visible: { transition: { staggerChildren: 0.08 } },
+                        exit: { transition: { staggerChildren: 0.04 } },
+                      }}
+                      data-testid="starter-chips"
+                    >
+                      {STARTER_CHIPS.map((chip) => (
+                        <motion.button
+                          key={chip}
+                          className="inline-flex h-12 px-5 items-center justify-center rounded-3xl bg-white/10 hover:bg-white/20 transition-colors"
+                          variants={{
+                            hidden: { opacity: 0, y: 10 },
+                            visible: { opacity: 1, y: 0 },
+                            exit: { opacity: 0, scale: 0.9 },
+                          }}
+                          transition={{ duration: 0.25 }}
+                          onClick={() => handleChipTap(chip)}
+                          data-testid={`chip-starter-${chip.replace(/\s+/g, "-")}`}
+                        >
+                          <span className="text-white/60 font-medium text-base leading-[150%] tracking-[-0.176px]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                            {chip}
+                          </span>
+                        </motion.button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-          <AnimatePresence>
-            {isComposer && showAIChips && !hasUserTyped && (
-              <motion.div
-                className="flex flex-col items-center gap-2 mt-5 w-full"
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                variants={{
-                  visible: { transition: { staggerChildren: 0.08 } },
-                  exit: { transition: { staggerChildren: 0.04 } },
-                }}
-                data-testid="question-chips"
-              >
-                {QUESTION_CHIPS.map((chip) => (
-                  <motion.button
-                    key={chip.label}
-                    className="inline-flex h-12 px-5 items-center justify-center gap-2 rounded-3xl bg-white/10 hover:bg-white/20 transition-colors"
-                    variants={{
-                      hidden: { opacity: 0, y: 10 },
-                      visible: { opacity: 1, y: 0 },
-                      exit: { opacity: 0, scale: 0.9 },
-                    }}
-                    transition={{ duration: 0.25 }}
-                    onClick={() => handleQuestionChipTap(chip.stem)}
-                    data-testid={`chip-question-${chip.label.replace(/\s+/g, "-")}`}
-                  >
-                    <Sparkles className="w-3.5 h-3.5 shrink-0 text-white" />
-                    <span className="text-white/60 font-medium text-base italic leading-[150%] tracking-[-0.176px]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                      {chip.label}
-                    </span>
-                  </motion.button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+                <AnimatePresence>
+                  {isComposer && showAIChips && !hasUserTyped && (
+                    <motion.div
+                      className="flex flex-col items-center gap-2 mt-5 w-full"
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      variants={{
+                        visible: { transition: { staggerChildren: 0.08 } },
+                        exit: { transition: { staggerChildren: 0.04 } },
+                      }}
+                      data-testid="question-chips"
+                    >
+                      {QUESTION_CHIPS.map((chip) => (
+                        <motion.button
+                          key={chip.label}
+                          className="inline-flex h-12 px-5 items-center justify-center gap-2 rounded-3xl bg-white/10 hover:bg-white/20 transition-colors"
+                          variants={{
+                            hidden: { opacity: 0, y: 10 },
+                            visible: { opacity: 1, y: 0 },
+                            exit: { opacity: 0, scale: 0.9 },
+                          }}
+                          transition={{ duration: 0.25 }}
+                          onClick={() => handleQuestionChipTap(chip.stem)}
+                          data-testid={`chip-question-${chip.label.replace(/\s+/g, "-")}`}
+                        >
+                          <Sparkles className="w-3.5 h-3.5 shrink-0 text-white" />
+                          <span className="text-white/60 font-medium text-base italic leading-[150%] tracking-[-0.176px]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                            {chip.label}
+                          </span>
+                        </motion.button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {isComposer && (
@@ -623,7 +639,6 @@ export default function Home() {
             </motion.div>
           )}
         </AnimatePresence>
-
       </div>
     </div>
   );
