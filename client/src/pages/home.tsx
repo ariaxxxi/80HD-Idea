@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate, type MotionValue } from "framer-motion";
 import { Sparkles, Leaf } from "lucide-react";
 import bgImage from "@assets/Home_(1)_1770656113412.png";
 
@@ -23,79 +23,120 @@ const QUESTION_CHIPS = [
   { label: "Why now?", stem: "Now is the right time because " },
 ];
 
-const heavySpring = { type: "spring" as const, stiffness: 300, damping: 30 };
+const heavySpring = { type: "spring" as const, stiffness: 220, damping: 34 };
+const pullMaxDistance = 120;
+const gatherSpring = { type: "spring" as const, stiffness: 70, damping: 22 };
+const cursorFadeRange = [0, 20] as const;
 
-function CharacterAnimation({ text, onComplete }: { text: string; onComplete?: () => void }) {
-  const chars = text.split("");
-  return (
-    <span className="inline" aria-label={text}>
-      {chars.map((char, i) => (
-        <motion.span
-          key={`${char}-${i}`}
-          className="inline-block"
-          style={{ whiteSpace: char === " " ? "pre" : undefined }}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            delay: i * 0.05,
-            duration: 0.5,
-            ease: [0.25, 0.46, 0.45, 0.94],
-          }}
-          onAnimationComplete={i === chars.length - 1 ? onComplete : undefined}
-        >
-          {char}
-        </motion.span>
-      ))}
-    </span>
-  );
+type ScatterTarget = {
+  y: number;
+  rotate: number;
+};
+
+function randomRange(min: number, max: number) {
+  return Math.random() * (max - min) + min;
 }
 
-function BreathingCursor({ visible }: { visible: boolean }) {
+function generateScatterTargets(length: number) {
+  return Array.from({ length }, () => ({
+    y: randomRange(20, 150),
+    rotate: randomRange(-150, 150),
+  }));
+}
+
+function expandScatterTargets(targets: ScatterTarget[], length: number) {
+  if (targets.length >= length) {
+    return targets.slice(0, length);
+  }
+  const extras = generateScatterTargets(length - targets.length);
+  return [...targets, ...extras];
+}
+
+type BreathingCursorProps = {
+  visible: boolean;
+  opacity?: MotionValue<number>;
+};
+
+function BreathingCursor({ visible, opacity }: BreathingCursorProps) {
   return (
     <AnimatePresence>
       {visible && (
         <motion.span
-          className="inline-block w-[2px] h-[1.1em] align-middle bg-white ml-[2px] mr-[2px]"
+          className="inline-block align-middle"
+          style={opacity ? { opacity } : undefined}
           initial={{ opacity: 0 }}
-          animate={{ opacity: [0, 1, 0] }}
+          animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{
-            opacity: {
-              duration: 1.6,
-              repeat: Infinity,
-              ease: "easeInOut",
-            },
-          }}
-        />
+        >
+          <motion.span
+            className="inline-block w-[2px] h-[1.1em] align-middle bg-white ml-[2px] mr-[2px]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{
+              opacity: {
+                duration: 1.6,
+                repeat: Infinity,
+                ease: "easeInOut",
+              },
+            }}
+          />
+        </motion.span>
       )}
     </AnimatePresence>
   );
 }
 
+type ScrabbleCharProps = {
+  char: string;
+  index: number;
+  target: ScatterTarget;
+  pullY: MotionValue<number>;
+};
+
+function ScrabbleChar({ char, index, target, pullY }: ScrabbleCharProps) {
+  const y = useTransform(pullY, [0, pullMaxDistance], [0, target.y]);
+  const rotate = useTransform(pullY, [0, pullMaxDistance], [0, target.rotate]);
+
+  return (
+    <motion.span
+      key={`${char}-${index}`}
+      className="inline-block font-light"
+      style={{ y, rotate, whiteSpace: char === " " ? "pre" : undefined }}
+    >
+      {char}
+    </motion.span>
+  );
+}
+
 export default function Home() {
   const [promptIndex, setPromptIndex] = useState(0);
-  const [coldStartDone, setColdStartDone] = useState(false);
   const [showCursor, setShowCursor] = useState(false);
   const [isComposer, setIsComposer] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [showAIChips, setShowAIChips] = useState(false);
   const [isPulling, setIsPulling] = useState(false);
   const [slotDirection, setSlotDirection] = useState(1);
+  const [pullSession, setPullSession] = useState(0);
+  const [scatterTargets, setScatterTargets] = useState<ScatterTarget[]>(
+    () => generateScatterTargets(PROMPTS[0].length),
+  );
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pullStartY = useRef<number | null>(null);
   const isMouseDragging = useRef(false);
   const pullY = useMotionValue(0);
   const pullOpacity = useTransform(pullY, [0, 80], [1, 0.3]);
+  const cursorOpacity = useTransform(pullY, cursorFadeRange, [1, 0]);
+  const skipScatterSyncRef = useRef(false);
 
   const currentPrompt = PROMPTS[promptIndex];
+  const promptChars = currentPrompt.split("");
+  const sessionScatterTargets = useMemo(
+    () => generateScatterTargets(currentPrompt.length),
+    [currentPrompt.length, pullSession],
+  );
 
   const hasUserTyped = inputValue.length > currentPrompt.length;
-
-  const handleColdStartComplete = useCallback(() => {
-    setColdStartDone(true);
-    setShowCursor(true);
-  }, []);
 
   const handleTapToCompose = useCallback(() => {
     if (isComposer) return;
@@ -120,26 +161,37 @@ export default function Home() {
   }, []);
 
   const cyclePrompt = useCallback(() => {
+    const nextIndex = (promptIndex + 1) % PROMPTS.length;
+    const nextPrompt = PROMPTS[nextIndex];
     setSlotDirection(1);
-    setColdStartDone(false);
     setShowCursor(false);
-    setPromptIndex((prev) => (prev + 1) % PROMPTS.length);
+    skipScatterSyncRef.current = true;
+    setScatterTargets((prev) => expandScatterTargets(prev, nextPrompt.length));
+    setPromptIndex(nextIndex);
     setTimeout(() => {
-      setColdStartDone(true);
       setShowCursor(true);
     }, 50);
-  }, []);
+  }, [promptIndex]);
+
+  useEffect(() => {
+    if (skipScatterSyncRef.current) {
+      skipScatterSyncRef.current = false;
+      return;
+    }
+    setScatterTargets(sessionScatterTargets);
+  }, [sessionScatterTargets]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (isComposer) return;
     pullStartY.current = e.touches[0].clientY;
+    setPullSession((prev) => prev + 1);
   }, [isComposer]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (isComposer || pullStartY.current === null) return;
     const delta = e.touches[0].clientY - pullStartY.current;
     if (delta > 0) {
-      pullY.set(Math.min(delta, 120));
+      pullY.set(Math.min(delta, pullMaxDistance));
       if (delta > 30) setIsPulling(true);
     }
   }, [isComposer, pullY]);
@@ -150,20 +202,21 @@ export default function Home() {
     }
     setIsPulling(false);
     pullStartY.current = null;
-    animate(pullY, 0, { type: "spring", stiffness: 400, damping: 30 });
+    animate(pullY, 0, gatherSpring);
   }, [isPulling, pullY, cyclePrompt]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (isComposer) return;
     pullStartY.current = e.clientY;
     isMouseDragging.current = true;
+    setPullSession((prev) => prev + 1);
   }, [isComposer]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (isComposer || !isMouseDragging.current || pullStartY.current === null) return;
     const delta = e.clientY - pullStartY.current;
     if (delta > 0) {
-      pullY.set(Math.min(delta, 120));
+      pullY.set(Math.min(delta, pullMaxDistance));
       if (delta > 30) setIsPulling(true);
     }
   }, [isComposer, pullY]);
@@ -176,7 +229,7 @@ export default function Home() {
     setIsPulling(false);
     pullStartY.current = null;
     isMouseDragging.current = false;
-    animate(pullY, 0, { type: "spring", stiffness: 400, damping: 30 });
+    animate(pullY, 0, gatherSpring);
   }, [isPulling, pullY, cyclePrompt]);
 
   const handleChipTap = useCallback((chipText: string) => {
@@ -226,6 +279,10 @@ export default function Home() {
     }
   }, [inputValue]);
 
+  useEffect(() => {
+    setShowCursor(true);
+  }, []);
+
   return (
     <div
       className="relative min-h-[100dvh] w-full overflow-hidden bg-black"
@@ -269,7 +326,8 @@ export default function Home() {
 
         <motion.div
           className="flex-1 flex flex-col px-6"
-          style={!isComposer ? { y: pullY, opacity: pullOpacity } : {}}
+          initial={{ paddingTop: "40vh" }}
+          style={!isComposer ? { opacity: pullOpacity } : {}}
           animate={{
             paddingTop: isComposer ? "4.5rem" : "40vh",
           }}
@@ -280,9 +338,9 @@ export default function Home() {
           {!isComposer && (
             <motion.div
               className="mb-1"
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
+              transition={{ duration: 0.9, ease: "easeOut" }}
             >
               <span className="text-base text-muted-foreground font-medium tracking-wide" data-testid="text-greeting">right now</span>
             </motion.div>
@@ -297,42 +355,31 @@ export default function Home() {
               role="button"
               tabIndex={0}
               aria-label={`Tap to start writing: ${currentPrompt}`}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.5, ease: "easeOut" }}
+              transition={{ delay: 0.1, duration: 0.9, ease: "easeOut" }}
             >
               <AnimatePresence mode="wait">
-                <motion.div
-                  key={promptIndex}
-                  initial={{ y: slotDirection * -40, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: slotDirection * 40, opacity: 0 }}
-                  transition={heavySpring}
-                >
-                  <h1 className="text-3xl font-light tracking-tight text-white leading-tight" style={{ fontFamily: "'Roboto Serif', serif" }} data-testid="text-prompt">
-                    {!coldStartDone && promptIndex === 0 ? (
-                      <CharacterAnimation
-                        text={currentPrompt}
-                        onComplete={handleColdStartComplete}
-                      />
-                    ) : (
-                      <motion.span
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.15 }}
-                        onAnimationComplete={() => {
-                          if (!coldStartDone) {
-                            setColdStartDone(true);
-                            setShowCursor(true);
-                          }
-                        }}
-                        className="font-light">
-                        {currentPrompt}
-                      </motion.span>
-                    )}
-                    <BreathingCursor visible={showCursor} />
+                <div key={promptIndex}>
+                  <h1
+                    className="text-3xl font-light tracking-tight text-white leading-tight"
+                    style={{ fontFamily: "'Roboto Serif', serif" }}
+                    data-testid="text-prompt"
+                  >
+                    <motion.span className="inline">
+                      {promptChars.map((char, i) => (
+                        <ScrabbleChar
+                          key={`${char}-${i}`}
+                          char={char}
+                          index={i}
+                          target={scatterTargets[i] ?? { y: 0, rotate: 0 }}
+                          pullY={pullY}
+                        />
+                      ))}
+                    </motion.span>
+                    <BreathingCursor visible={showCursor} opacity={cursorOpacity} />
                   </h1>
-                </motion.div>
+                </div>
               </AnimatePresence>
             </motion.div>
           ) : (
@@ -362,19 +409,6 @@ export default function Home() {
             </motion.div>
           )}
 
-          {!isComposer && isPulling && (
-            <motion.div
-              className="mt-4 flex items-center gap-1.5 text-muted-foreground"
-              initial={{ opacity: 0, y: -5 }}
-              animate={{ opacity: 0.6, y: 0 }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 5v14" />
-                <path d="m19 12-7 7-7-7" />
-              </svg>
-              <span className="text-xs font-medium">Pull to refresh prompt</span>
-            </motion.div>
-          )}
 
           <AnimatePresence>
             {isComposer && !hasUserTyped && !showAIChips && (
@@ -479,28 +513,6 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {!isComposer && (
-          <motion.div
-            className="pb-8 px-6 flex justify-center"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.2, duration: 0.6 }}
-          >
-            <motion.button
-              className="flex items-center gap-2 text-xs text-muted-foreground/60 font-medium"
-              onClick={cyclePrompt}
-              whileTap={{ scale: 0.95 }}
-              data-testid="button-cycle-prompt"
-              aria-label="Next prompt"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
-                <path d="M21 3v5h-5" />
-              </svg>
-              Shuffle prompt
-            </motion.button>
-          </motion.div>
-        )}
       </div>
     </div>
   );
