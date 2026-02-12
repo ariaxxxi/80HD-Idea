@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence, useMotionValue, useTransform, animate, type MotionValue } from "framer-motion";
-import { Sparkles, Leaf } from "lucide-react";
+import { Sparkles, Leaf, X, RefreshCw } from "lucide-react";
 import bgImage from "@assets/Home_(1)_1770656113412.png";
+import aiBgImage from "@assets/AI-BG.png";
 
 const PROMPTS = [
   "i'm thinking about",
@@ -17,15 +18,76 @@ const STARTER_CHIPS = [
   "something bold",
 ];
 
-const QUESTION_CHIPS = [
-  { label: "Who is it for?", stem: "It is for people who " },
-  { label: "What's the twist?", stem: "The twist is that " },
-  { label: "Why now?", stem: "Now is the right time because " },
+type MusePrompt = {
+  id: string;
+  label: string;
+  insert: string;
+};
+
+const CURATED_MUSE_PROMPTS: MusePrompt[] = [
+  { id: "who-for", label: "Who is it for?", insert: "\nIt is designed for people who " },
+  { id: "twist", label: "What's the twist?", insert: "\nThe unique twist is that " },
+  { id: "vibe", label: "What's the vibe?", insert: "\nThe visual aesthetic feels like " },
+  { id: "first-step", label: "First step?", insert: "\nThe very first thing to do is " },
+  { id: "core-problem", label: "Core problem?", insert: "\nThe main problem this solves is " },
+  { id: "moment", label: "When does it click?", insert: "\nThis feels most useful when " },
+  { id: "emotion", label: "What should it feel like?", insert: "\nI want people to feel " },
+  { id: "risk", label: "Biggest risk?", insert: "\nThe biggest risk to watch is " },
+  { id: "proof", label: "How to test it fast?", insert: "\nA quick way to validate this is " },
+  { id: "scope-cut", label: "What can we cut?", insert: "\nTo keep it simple, we can remove " },
 ];
+
+function generatePrompts(currentText: string, excludedIds: string[] = []): MusePrompt[] {
+  const lower = currentText.toLowerCase();
+  const orderedIds: string[] = [];
+
+  if (/user|audience|for people|customer/.test(lower)) {
+    orderedIds.push("twist", "vibe", "first-step", "moment", "proof");
+  } else if (/visual|style|look|aesthetic|brand/.test(lower)) {
+    orderedIds.push("vibe", "emotion", "who-for", "twist", "scope-cut");
+  } else if (/build|ship|step|start|plan/.test(lower)) {
+    orderedIds.push("first-step", "proof", "risk", "who-for", "twist");
+  } else {
+    orderedIds.push("who-for", "twist", "vibe", "first-step", "core-problem", "proof");
+  }
+
+  orderedIds.push("core-problem", "moment", "emotion", "risk", "scope-cut");
+
+  const promptsById = new Map(CURATED_MUSE_PROMPTS.map((prompt) => [prompt.id, prompt]));
+  const selected: MusePrompt[] = [];
+
+  for (const id of orderedIds) {
+    const prompt = promptsById.get(id);
+    if (!prompt) continue;
+    if (excludedIds.includes(prompt.id)) continue;
+    if (selected.some((item) => item.id === prompt.id)) continue;
+    selected.push(prompt);
+    if (selected.length === 3) break;
+  }
+
+  if (selected.length < 3) {
+    for (const prompt of CURATED_MUSE_PROMPTS) {
+      if (excludedIds.includes(prompt.id)) continue;
+      if (selected.some((item) => item.id === prompt.id)) continue;
+      selected.push(prompt);
+      if (selected.length === 3) break;
+    }
+  }
+
+  if (selected.length < 3) {
+    for (const prompt of CURATED_MUSE_PROMPTS) {
+      if (selected.some((item) => item.id === prompt.id)) continue;
+      selected.push(prompt);
+      if (selected.length === 3) break;
+    }
+  }
+
+  return selected;
+}
 
 const pullMaxDistance = 120;
 const gatherSpring = { type: "spring" as const, stiffness: 120, damping: 20 };
-const cursorFadeRange = [0, 20] as const;
+const cursorFadeRange = [0, 20];
 const introBaseDelay = 0.5;
 const introStagger = 0.03;
 const introDuration = 0.3;
@@ -157,8 +219,15 @@ export default function Home() {
   const [newCharStartIndex, setNewCharStartIndex] = useState<number | null>(null);
   const [introActive, setIntroActive] = useState(true);
   const [lockedHeight, setLockedHeight] = useState<number | null>(null);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const [isReturningHome, setIsReturningHome] = useState(false);
+  const [musePrompts, setMusePrompts] = useState<MusePrompt[]>(() =>
+    generatePrompts(""),
+  );
+  const [musePromptBatch, setMusePromptBatch] = useState(0);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const composerScrollRef = useRef<HTMLDivElement>(null);
   const pullStartY = useRef<number | null>(null);
   const isMouseDragging = useRef(false);
   const pullY = useMotionValue(0);
@@ -175,9 +244,24 @@ export default function Home() {
 
   const hasUserTyped = inputValue.length > currentPrompt.length;
 
+  const focusComposerInput = useCallback(() => {
+    if (!textareaRef.current) return;
+    textareaRef.current.focus({ preventScroll: true });
+    const len = textareaRef.current.value.length;
+    textareaRef.current.selectionStart = len;
+    textareaRef.current.selectionEnd = len;
+  }, []);
+
+  const dismissComposerKeyboard = useCallback(() => {
+    textareaRef.current?.blur();
+    const activeEl = document.activeElement as HTMLElement | null;
+    activeEl?.blur?.();
+  }, []);
+
   const handleTapToCompose = useCallback(() => {
     if (isComposer) return;
     setIsComposer(true);
+    setIsReturningHome(false);
     setShowCursor(false);
     setInputValue(currentPrompt);
     setShowAIChips(false);
@@ -191,6 +275,7 @@ export default function Home() {
   }, [isComposer, currentPrompt]);
 
   const handleBack = useCallback(() => {
+    setIsReturningHome(true);
     setIsComposer(false);
     setInputValue("");
     setShowAIChips(false);
@@ -297,24 +382,59 @@ export default function Home() {
   }, []);
 
   const handleQuestionChipTap = useCallback((stem: string) => {
-    setInputValue((prev) => prev + " " + stem);
+    setInputValue((prev) => prev + stem);
     setShowAIChips(false);
     setTimeout(() => {
       if (textareaRef.current) {
         textareaRef.current.focus();
+        textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
         const len = textareaRef.current.value.length;
         textareaRef.current.selectionStart = len;
         textareaRef.current.selectionEnd = len;
       }
+      if (composerScrollRef.current) {
+        composerScrollRef.current.scrollTo({
+          top: composerScrollRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }
     }, 50);
   }, []);
 
+  const handleOpenAiMode = useCallback(() => {
+    setMusePrompts(generatePrompts(inputValue));
+    setMusePromptBatch((prev) => prev + 1);
+    setShowAIChips(true);
+    setTimeout(() => dismissComposerKeyboard(), 0);
+  }, [dismissComposerKeyboard, inputValue]);
+
+  const handleCloseAiMode = useCallback(() => {
+    setShowAIChips(false);
+  }, []);
+
+  const handleRefreshAiPrompts = useCallback(() => {
+    setMusePrompts((prev) => {
+      const prevIds = prev.map((prompt) => prompt.id);
+      return generatePrompts(inputValue, prevIds);
+    });
+    setMusePromptBatch((prev) => prev + 1);
+    setTimeout(() => dismissComposerKeyboard(), 0);
+  }, [dismissComposerKeyboard, inputValue]);
+
+  const handleComposerInputInteract = useCallback(() => {
+    if (!showAIChips) return;
+    setShowAIChips(false);
+    requestAnimationFrame(() => {
+      if (!textareaRef.current) return;
+      textareaRef.current.focus({ preventScroll: true });
+      const len = textareaRef.current.value.length;
+      textareaRef.current.selectionStart = len;
+      textareaRef.current.selectionEnd = len;
+    });
+  }, [showAIChips]);
+
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
-    if (val.length < currentPrompt.length) {
-      setInputValue(currentPrompt);
-      return;
-    }
     setInputValue(val);
     if (val.length > currentPrompt.length) {
       setShowAIChips(false);
@@ -352,15 +472,27 @@ export default function Home() {
   }, [isComposer]);
 
   useEffect(() => {
-    if (!isComposer) return;
-    const preventTouchMove = (event: TouchEvent) => {
-      if (event.cancelable) {
-        event.preventDefault();
+    if (!isComposer) {
+      setKeyboardOffset(0);
+      return;
+    }
+    const updateOffset = () => {
+      const vv = window.visualViewport;
+      if (!vv) {
+        setKeyboardOffset(0);
+        return;
       }
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKeyboardOffset(offset);
     };
-    document.addEventListener("touchmove", preventTouchMove, { passive: false });
+    updateOffset();
+    window.visualViewport?.addEventListener("resize", updateOffset);
+    window.visualViewport?.addEventListener("scroll", updateOffset);
+    window.addEventListener("orientationchange", updateOffset);
     return () => {
-      document.removeEventListener("touchmove", preventTouchMove);
+      window.visualViewport?.removeEventListener("resize", updateOffset);
+      window.visualViewport?.removeEventListener("scroll", updateOffset);
+      window.removeEventListener("orientationchange", updateOffset);
     };
   }, [isComposer]);
 
@@ -393,6 +525,35 @@ export default function Home() {
     return () => clearTimeout(introTimeout);
   }, [promptChars.length]);
 
+  useEffect(() => {
+    if (!isReturningHome) return;
+    const timer = setTimeout(() => setIsReturningHome(false), 500);
+    return () => clearTimeout(timer);
+  }, [isReturningHome]);
+
+  useEffect(() => {
+    if (!isComposer) return;
+    const scrollEl = composerScrollRef.current;
+    const textareaEl = textareaRef.current;
+    if (!scrollEl || !textareaEl) return;
+    const raf = requestAnimationFrame(() => {
+      const caretBottom = textareaEl.offsetTop + textareaEl.offsetHeight;
+      const visibleBottom = scrollEl.scrollTop + scrollEl.clientHeight - (keyboardOffset + 96);
+      if (caretBottom > visibleBottom) {
+        scrollEl.scrollTo({
+          top: Math.max(0, caretBottom - scrollEl.clientHeight + keyboardOffset + 96),
+          behavior: "smooth",
+        });
+      }
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [inputValue, isComposer, keyboardOffset]);
+
+  useEffect(() => {
+    if (!showAIChips) return;
+    dismissComposerKeyboard();
+  }, [showAIChips, dismissComposerKeyboard]);
+
 
 
   return (
@@ -420,6 +581,22 @@ export default function Home() {
         aria-hidden="true"
         data-testid="bg-image"
       />
+      <AnimatePresence>
+        {isComposer && showAIChips && (
+          <motion.img
+            key="ai-mode-bg"
+            src={aiBgImage}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover pointer-events-none z-10"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.2, ease: "easeInOut" }}
+            aria-hidden="true"
+            data-testid="bg-image-ai-mode"
+          />
+        )}
+      </AnimatePresence>
       <div className="relative z-20 h-full">
         <AnimatePresence>
           {isComposer && (
@@ -447,159 +624,248 @@ export default function Home() {
               className="absolute inset-0 flex flex-col items-start justify-center px-[30px]"
               style={{ opacity: pullOpacity }}
             >
-              <motion.div
-                layoutId="right-now"
-                layout="position"
-                transition={{ type: "spring", stiffness: 110, damping: 20 }}
-                className="text-white font-medium leading-[120%] tracking-[-0.16px] mb-1"
-                style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "16px" }}
-                data-testid="text-greeting"
-              >
-                right now
-              </motion.div>
+              {isReturningHome ? (
+                <>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.25 }}
+                    className="text-white font-medium leading-[120%] tracking-[-0.16px] mb-1"
+                    style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "16px" }}
+                    data-testid="text-greeting"
+                  >
+                    right now
+                  </motion.div>
 
-              <motion.div
-                layoutId="prompt-line"
-                layout="position"
-                transition={{ type: "spring", stiffness: 110, damping: 20 }}
-                className="cursor-pointer"
-                onClick={handleTapToCompose}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleTapToCompose(); } }}
-                data-testid="button-compose"
-                role="button"
-                tabIndex={0}
-                aria-label={`Tap to start writing: ${currentPrompt}`}
-              >
-                <h1
-                  className="text-[32px] font-normal text-white leading-[38.4px] tracking-[0] flex items-start"
-                  style={{
-                    fontFamily: "'Roboto Serif', serif",
-                    fontKerning: "none",
-                    fontVariantLigatures: "none",
-                    letterSpacing: "0px",
-                    willChange: "transform",
-                  }}
-                  data-testid="text-prompt"
-                >
-                  <motion.span className="inline-flex" style={{ gap: 0, whiteSpace: "pre" }}>
-                    {promptChars.map((char, i) => (
-                      <ScrabbleChar
-                        key={i}
-                        char={char}
-                        index={i}
-                        target={scatterTargets[i] ?? { y: 0, rotate: 0 }}
-                        pullY={pullY}
-                        introActive={introActive}
-                        fadeInExtra={newCharStartIndex !== null && i >= newCharStartIndex}
-                      />
-                    ))}
-                  </motion.span>
-                  <BreathingCursor visible={showCursor} opacity={cursorOpacity} />
-                </h1>
-              </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.25, delay: 0.05 }}
+                    className="cursor-pointer"
+                    onClick={handleTapToCompose}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleTapToCompose(); } }}
+                    data-testid="button-compose"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Tap to start writing: ${currentPrompt}`}
+                  >
+                    <h1
+                      className="text-[32px] font-normal text-white leading-[38.4px] tracking-[0] flex items-start"
+                      style={{
+                        fontFamily: "'Roboto Serif', serif",
+                        fontKerning: "none",
+                        fontVariantLigatures: "none",
+                        letterSpacing: "0px",
+                        willChange: "transform",
+                      }}
+                      data-testid="text-prompt"
+                    >
+                      <motion.span className="inline-flex" style={{ gap: 0, whiteSpace: "pre" }}>
+                        {promptChars.map((char, i) => (
+                          <ScrabbleChar
+                            key={i}
+                            char={char}
+                            index={i}
+                            target={scatterTargets[i] ?? { y: 0, rotate: 0 }}
+                            pullY={pullY}
+                            introActive={introActive}
+                            fadeInExtra={newCharStartIndex !== null && i >= newCharStartIndex}
+                          />
+                        ))}
+                      </motion.span>
+                      <BreathingCursor visible={showCursor} opacity={cursorOpacity} />
+                    </h1>
+                  </motion.div>
+                </>
+              ) : (
+                <>
+                  <motion.div
+                    layoutId="right-now"
+                    layout="position"
+                    transition={{ type: "spring", stiffness: 110, damping: 20 }}
+                    className="text-white font-medium leading-[120%] tracking-[-0.16px] mb-1"
+                    style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "16px" }}
+                    data-testid="text-greeting"
+                  >
+                    right now
+                  </motion.div>
+
+                  <motion.div
+                    layoutId="prompt-line"
+                    layout="position"
+                    transition={{ type: "spring", stiffness: 110, damping: 20 }}
+                    className="cursor-pointer"
+                    onClick={handleTapToCompose}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleTapToCompose(); } }}
+                    data-testid="button-compose"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Tap to start writing: ${currentPrompt}`}
+                  >
+                    <h1
+                      className="text-[32px] font-normal text-white leading-[38.4px] tracking-[0] flex items-start"
+                      style={{
+                        fontFamily: "'Roboto Serif', serif",
+                        fontKerning: "none",
+                        fontVariantLigatures: "none",
+                        letterSpacing: "0px",
+                        willChange: "transform",
+                      }}
+                      data-testid="text-prompt"
+                    >
+                      <motion.span className="inline-flex" style={{ gap: 0, whiteSpace: "pre" }}>
+                        {promptChars.map((char, i) => (
+                          <ScrabbleChar
+                            key={i}
+                            char={char}
+                            index={i}
+                            target={scatterTargets[i] ?? { y: 0, rotate: 0 }}
+                            pullY={pullY}
+                            introActive={introActive}
+                            fadeInExtra={newCharStartIndex !== null && i >= newCharStartIndex}
+                          />
+                        ))}
+                      </motion.span>
+                      <BreathingCursor visible={showCursor} opacity={cursorOpacity} />
+                    </h1>
+                  </motion.div>
+                </>
+              )}
             </motion.div>
           )}
 
           {isComposer && (
             <motion.div key="composer" className="absolute inset-0">
-              <div className="relative z-10 pt-[117px] px-[30px]">
-                <motion.div
-                  layoutId="right-now"
-                  layout="position"
-                  transition={{ type: "spring", stiffness: 110, damping: 20 }}
-                  className="text-white font-medium leading-[120%] tracking-[-0.14px] mb-1"
-                  style={{ fontFamily: "'DM Sans', sans-serif", fontSize: "14px" }}
+              <div className="relative z-10 h-full pt-[60px] px-[30px] flex flex-col">
+                <div
+                  ref={composerScrollRef}
+                  className="relative flex-1 overflow-y-auto pb-24"
+                  style={{
+                    paddingBottom: `${keyboardOffset + 120}px`,
+                    scrollPaddingBottom: `${keyboardOffset + 120}px`,
+                  }}
                 >
-                  right now
-                </motion.div>
-                <motion.div
-                  layoutId="prompt-line"
-                  layout="position"
-                  transition={{ type: "spring", stiffness: 110, damping: 20 }}
-                  className="relative"
-                >
-                  <textarea
-                    ref={textareaRef}
-                    value={inputValue}
-                    onChange={handleInputChange}
-                    className="w-full bg-transparent text-white text-[24px] font-normal leading-[120%] tracking-[-0.24px] border-none outline-none resize-none overflow-hidden touch-none"
-                    style={{ fontFamily: "'Roboto Serif', serif" }}
-                    autoFocus
-                    data-testid="input-composer"
-                    aria-label="Write your idea"
-                  />
-                </motion.div>
+                  <div className="pointer-events-none absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-black to-transparent z-10" />
 
-                <AnimatePresence>
-                  {isComposer && !hasUserTyped && !showAIChips && (
-                    <motion.div
-                      className="flex flex-col items-center gap-4 mt-10 w-full"
-                      initial="hidden"
-                      animate="visible"
-                      exit="exit"
+                  <motion.div
+                    layoutId="prompt-line"
+                    layout="position"
+                    transition={{ type: "spring", stiffness: 110, damping: 20 }}
+                    className="relative pt-4"
+                  >
+                    <textarea
+                      ref={textareaRef}
+                      value={inputValue}
+                      onChange={handleInputChange}
+                      onFocus={handleComposerInputInteract}
+                      onPointerDown={handleComposerInputInteract}
+                      className="w-full min-h-full bg-transparent text-white text-[24px] font-normal leading-relaxed tracking-[-0.24px] border-none outline-none focus:outline-none focus:ring-0 resize-none"
+                      style={{
+                        fontFamily: "'Roboto Serif', serif",
+                        scrollPaddingBottom: `${keyboardOffset + 120}px`,
+                      }}
+                      autoFocus
+                      data-testid="input-composer"
+                      aria-label="Write your idea"
+                    />
+                  </motion.div>
+
+                  <AnimatePresence>
+                    {isComposer && !hasUserTyped && !showAIChips && (
+                      <motion.div
+                        className="flex flex-col items-center gap-4 mt-10 w-full"
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
                       variants={{
-                        visible: { transition: { staggerChildren: 0.08 } },
+                        visible: { transition: { delayChildren: 1, staggerChildren: 0.08 } },
                         exit: { transition: { staggerChildren: 0.04 } },
                       }}
                       data-testid="starter-chips"
                     >
-                      {STARTER_CHIPS.map((chip) => (
-                        <motion.button
-                          key={chip}
-                          className="inline-flex h-12 px-5 items-center justify-center rounded-3xl bg-white/10 hover:bg-white/20 transition-colors"
+                        {STARTER_CHIPS.map((chip) => (
+                          <motion.button
+                            key={chip}
+                            className="inline-flex h-11 px-5 items-center justify-center rounded-3xl bg-white/10 hover:bg-white/20 transition-colors"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onTouchStart={(e) => e.preventDefault()}
                           variants={{
-                            hidden: { opacity: 0, y: 10 },
+                            hidden: { opacity: 0, y: 18 },
                             visible: { opacity: 1, y: 0 },
-                            exit: { opacity: 0, scale: 0.9 },
+                            exit: {
+                              opacity: 0,
+                              scale: 0.7,
+                              transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+                            },
                           }}
-                          transition={{ duration: 0.25 }}
+                          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
                           onClick={() => handleChipTap(chip)}
                           data-testid={`chip-starter-${chip.replace(/\s+/g, "-")}`}
                         >
-                          <span className="text-white/60 font-medium text-base leading-[150%] tracking-[-0.176px]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                            {chip}
-                          </span>
-                        </motion.button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                            <span className="text-white/50 font-medium text-base leading-[150%] tracking-[-0.176px]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                              {chip}
+                            </span>
+                          </motion.button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-                <AnimatePresence>
-                  {isComposer && showAIChips && !hasUserTyped && (
+                <AnimatePresence mode="wait">
+                  {isComposer && showAIChips && (
                     <motion.div
-                      className="flex flex-col items-center gap-2 mt-5 w-full"
+                      key={`muse-batch-${musePromptBatch}`}
+                      className="fixed left-0 right-0 z-[55] flex flex-col items-center gap-6 px-6"
+                      style={{ bottom: `${keyboardOffset + 102}px` }}
                       initial="hidden"
                       animate="visible"
                       exit="exit"
                       variants={{
-                        visible: { transition: { staggerChildren: 0.08 } },
-                        exit: { transition: { staggerChildren: 0.04 } },
+                        hidden: { opacity: 0, y: 20 },
+                        visible: {
+                          opacity: 1,
+                          y: 0,
+                          transition: { delayChildren: 1, staggerChildren: 0.08, staggerDirection: -1 },
+                        },
+                        exit: { opacity: 1, y: 0, transition: { staggerChildren: 0.08, staggerDirection: -1 } },
                       }}
                       data-testid="question-chips"
                     >
-                      {QUESTION_CHIPS.map((chip) => (
+                      {musePrompts.map((chip) => (
                         <motion.button
-                          key={chip.label}
-                          className="inline-flex h-12 px-5 items-center justify-center gap-2 rounded-3xl bg-white/10 hover:bg-white/20 transition-colors"
-                          variants={{
-                            hidden: { opacity: 0, y: 10 },
-                            visible: { opacity: 1, y: 0 },
-                            exit: { opacity: 0, scale: 0.9 },
+                          key={chip.id}
+                          className="inline-flex h-12 px-5 items-center justify-center gap-2 rounded-3xl bg-white/10 border border-white/15 backdrop-blur-[28px] backdrop-saturate-125 hover:bg-white/15 transition-colors"
+                          style={{ boxShadow: "0 0 24px rgba(255,255,255,0.12), 0 8px 24px rgba(0,0,0,0.22)" }}
+                          whileTap={{
+                            scale: 0.98,
+                            backgroundColor: "rgba(255,255,255,0.2)",
+                            boxShadow: "0 0 40px rgba(255,255,255,0.35), 0 10px 28px rgba(0,0,0,0.24)",
                           }}
-                          transition={{ duration: 0.25 }}
-                          onClick={() => handleQuestionChipTap(chip.stem)}
-                          data-testid={`chip-question-${chip.label.replace(/\s+/g, "-")}`}
+                          transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onTouchStart={(e) => e.preventDefault()}
+                          variants={{
+                            hidden: { opacity: 0, y: 18 },
+                            visible: { opacity: 1, y: 0 },
+                            exit: {
+                              opacity: 0,
+                              y: 18,
+                              transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+                            },
+                          }}
+                          onClick={() => handleQuestionChipTap(chip.insert)}
+                          data-testid={`chip-question-${chip.id}`}
                         >
-                          <Sparkles className="w-3.5 h-3.5 shrink-0 text-white" />
-                          <span className="text-white/60 font-medium text-base italic leading-[150%] tracking-[-0.176px]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-                            {chip.label}
-                          </span>
-                        </motion.button>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                          <Sparkles className="w-3.5 h-3.5 shrink-0 text-white/85" />
+                          <span className="text-white/95 font-medium text-base italic leading-[150%] tracking-[-0.176px]" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+                              {chip.label}
+                            </span>
+                          </motion.button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </motion.div>
           )}
@@ -608,33 +874,66 @@ export default function Home() {
         <AnimatePresence>
           {isComposer && (
             <motion.div
-              className="fixed bottom-0 left-0 right-0 z-50"
+              className="fixed left-0 right-0 z-50"
               initial={{ y: 60, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 60, opacity: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               data-testid="toolbar"
+              style={{ bottom: `${keyboardOffset}px` }}
             >
-              <div className="flex items-center justify-between px-4 py-3 backdrop-blur-md bg-background/80 dark:bg-background/70 border-t border-border/50">
-                <motion.button
-                  className="flex items-center justify-center w-10 h-10 rounded-md text-primary hover-elevate active-elevate-2"
-                  whileTap={{ scale: 0.92 }}
-                  onClick={() => setShowAIChips((prev) => !prev)}
-                  data-testid="button-ai-sparkle"
-                  aria-label="AI suggestions"
-                >
-                  <Sparkles className="w-5 h-5" />
-                </motion.button>
+              <div className="flex items-center justify-between px-4 py-3 bg-transparent border-t border-transparent md:bg-background/80 md:dark:bg-background/70 md:border-border/50">
+                {!showAIChips && (
+                  <motion.button
+                    className="flex items-center justify-center w-12 h-12 rounded-3xl bg-white/10 text-white hover-elevate active-elevate-2 md:bg-transparent md:text-primary"
+                    whileTap={{ scale: 0.92 }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onTouchStart={(e) => e.preventDefault()}
+                    onClick={handleOpenAiMode}
+                    data-testid="button-ai-sparkle"
+                    aria-label="AI suggestions"
+                  >
+                    <Sparkles className="w-5 h-5" />
+                  </motion.button>
+                )}
 
-                <motion.button
-                  className="flex items-center gap-2 px-5 min-h-9 rounded-md bg-primary text-primary-foreground text-sm font-semibold hover-elevate active-elevate-2"
-                  whileTap={{ scale: 0.95 }}
-                  data-testid="button-finish"
-                  aria-label="Plant your idea"
-                >
-                  <Leaf className="w-4 h-4" />
-                  <span>Plant</span>
-                </motion.button>
+                {showAIChips && (
+                  <div className="absolute left-1/2 -translate-x-1/2 -translate-y-[30px] flex items-center gap-4">
+                    <motion.button
+                      className="flex items-center justify-center w-12 h-12 rounded-3xl bg-white/10 text-white hover-elevate active-elevate-2"
+                      whileTap={{ scale: 0.92 }}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onTouchStart={(e) => e.preventDefault()}
+                      onClick={handleCloseAiMode}
+                      data-testid="button-ai-close"
+                      aria-label="Close AI mode"
+                    >
+                      <X className="w-4 h-4" />
+                    </motion.button>
+                    <motion.button
+                      className="flex items-center justify-center w-12 h-12 rounded-3xl bg-white/10 text-white hover-elevate active-elevate-2"
+                      whileTap={{ scale: 0.92 }}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onTouchStart={(e) => e.preventDefault()}
+                      onClick={handleRefreshAiPrompts}
+                      data-testid="button-ai-refresh"
+                      aria-label="Refresh AI prompts"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </motion.button>
+                  </div>
+                )}
+
+                {!showAIChips && (
+                  <motion.button
+                    className="flex items-center gap-2 px-5 h-11 rounded-3xl bg-white/10 text-white text-sm font-semibold hover-elevate active-elevate-2 md:bg-primary md:text-primary-foreground"
+                    whileTap={{ scale: 0.95 }}
+                    data-testid="button-finish"
+                    aria-label="Plant your idea"
+                  >
+                    <span>Finish</span>
+                  </motion.button>
+                )}
               </div>
             </motion.div>
           )}
