@@ -23,8 +23,6 @@
 ## Interaction & Vibe Logic (The "Pillow" Standard)
 **Goal:** All motion must feel **organic, fluid, and calming.** Avoid "chaotic" or "aggressive" values that trigger sensory overwhelm.
 
-- **Rotation Limits:** Never rotate text or elements more than **15 degrees** (e.g., `rotate: [-15, 15]`). Avoid full flips or "broken" looks.
-- **Scatter Limits:** Keep displacement within a readable range (Max **60px**). Elements should drift, not fly off-screen.
 - **Spring Physics:** Prefer **"Heavy/Damped"** springs over "High Tension" ones to mimic underwater resistance.
   - *Recommended Default:* `type: "spring", stiffness: 120, damping: 20, mass: 1`
   - *Avoid:* `stiffness: >300` (too snappy) or `bounce: >0.5` (too jittery).
