@@ -1,209 +1,26 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform, animate, type MotionValue } from "framer-motion";
-import { Sparkles, Leaf, X, RefreshCw } from "lucide-react";
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from "framer-motion";
+import { Sparkles, X, RefreshCw } from "lucide-react";
 import bgImage from "@assets/Home_(1)_1770656113412.png";
 import aiBgImage from "@assets/AI-BG.png";
-
-const PROMPTS = [
-  "i'm thinking about",
-  "i want to build",
-  "i want to learn",
-  "i'm curious about",
-  "i want to create",
-];
-
-const STARTER_CHIPS = [
-  "a music loop",
-  "a portfolio piece",
-  "something bold",
-];
-
-type MusePrompt = {
-  id: string;
-  label: string;
-  insert: string;
-};
-
-const CURATED_MUSE_PROMPTS: MusePrompt[] = [
-  { id: "who-for", label: "Who is it for?", insert: "\nIt is designed for people who " },
-  { id: "twist", label: "What's the twist?", insert: "\nThe unique twist is that " },
-  { id: "vibe", label: "What's the vibe?", insert: "\nThe visual aesthetic feels like " },
-  { id: "first-step", label: "First step?", insert: "\nThe very first thing to do is " },
-  { id: "core-problem", label: "Core problem?", insert: "\nThe main problem this solves is " },
-  { id: "moment", label: "When does it click?", insert: "\nThis feels most useful when " },
-  { id: "emotion", label: "What should it feel like?", insert: "\nI want people to feel " },
-  { id: "risk", label: "Biggest risk?", insert: "\nThe biggest risk to watch is " },
-  { id: "proof", label: "How to test it fast?", insert: "\nA quick way to validate this is " },
-  { id: "scope-cut", label: "What can we cut?", insert: "\nTo keep it simple, we can remove " },
-];
-
-function generatePrompts(currentText: string, excludedIds: string[] = []): MusePrompt[] {
-  const lower = currentText.toLowerCase();
-  const orderedIds: string[] = [];
-
-  if (/user|audience|for people|customer/.test(lower)) {
-    orderedIds.push("twist", "vibe", "first-step", "moment", "proof");
-  } else if (/visual|style|look|aesthetic|brand/.test(lower)) {
-    orderedIds.push("vibe", "emotion", "who-for", "twist", "scope-cut");
-  } else if (/build|ship|step|start|plan/.test(lower)) {
-    orderedIds.push("first-step", "proof", "risk", "who-for", "twist");
-  } else {
-    orderedIds.push("who-for", "twist", "vibe", "first-step", "core-problem", "proof");
-  }
-
-  orderedIds.push("core-problem", "moment", "emotion", "risk", "scope-cut");
-
-  const promptsById = new Map(CURATED_MUSE_PROMPTS.map((prompt) => [prompt.id, prompt]));
-  const selected: MusePrompt[] = [];
-
-  for (const id of orderedIds) {
-    const prompt = promptsById.get(id);
-    if (!prompt) continue;
-    if (excludedIds.includes(prompt.id)) continue;
-    if (selected.some((item) => item.id === prompt.id)) continue;
-    selected.push(prompt);
-    if (selected.length === 3) break;
-  }
-
-  if (selected.length < 3) {
-    for (const prompt of CURATED_MUSE_PROMPTS) {
-      if (excludedIds.includes(prompt.id)) continue;
-      if (selected.some((item) => item.id === prompt.id)) continue;
-      selected.push(prompt);
-      if (selected.length === 3) break;
-    }
-  }
-
-  if (selected.length < 3) {
-    for (const prompt of CURATED_MUSE_PROMPTS) {
-      if (selected.some((item) => item.id === prompt.id)) continue;
-      selected.push(prompt);
-      if (selected.length === 3) break;
-    }
-  }
-
-  return selected;
-}
-
-const pullMaxDistance = 120;
-const gatherSpring = { type: "spring" as const, stiffness: 120, damping: 20 };
-const cursorFadeRange = [0, 20];
-const introBaseDelay = 0.5;
-const introStagger = 0.03;
-const introDuration = 0.3;
-
-type ScatterTarget = {
-  y: number;
-  rotate: number;
-};
-
-function randomRange(min: number, max: number) {
-  return Math.random() * (max - min) + min;
-}
-
-function generateScatterTargets(length: number) {
-  return Array.from({ length }, () => ({
-    y: randomRange(10, 60),
-    rotate: randomRange(-15, 15),
-  }));
-}
-
-function expandScatterTargets(targets: ScatterTarget[], length: number) {
-  if (targets.length >= length) {
-    return targets.slice(0, length);
-  }
-  const extras = generateScatterTargets(length - targets.length);
-  return [...targets, ...extras];
-}
-
-type BreathingCursorProps = {
-  visible: boolean;
-  opacity?: MotionValue<number>;
-};
-
-function BreathingCursor({ visible, opacity }: BreathingCursorProps) {
-  return (
-    <AnimatePresence>
-      {visible && (
-        <motion.span
-          className="inline-block align-middle"
-          style={opacity ? { opacity } : undefined}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <motion.span
-            className="inline-block w-[2px] h-[1.1em] align-middle bg-white ml-[3px] mr-[2px] -translate-y-[2px]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 1, 0] }}
-            transition={{
-              opacity: {
-                duration: 1.6,
-                repeat: Infinity,
-                ease: "easeInOut",
-              },
-            }}
-          />
-        </motion.span>
-      )}
-    </AnimatePresence>
-  );
-}
-
-type ScrabbleCharProps = {
-  char: string;
-  index: number;
-  target: ScatterTarget;
-  pullY: MotionValue<number>;
-  introActive: boolean;
-  fadeInExtra: boolean;
-};
-
-function ScrabbleChar({ char, index, target, pullY, introActive, fadeInExtra }: ScrabbleCharProps) {
-  const y = useTransform(pullY, [0, pullMaxDistance], [0, target.y]);
-  const rotate = useTransform(pullY, [0, pullMaxDistance], [0, target.rotate]);
-  const opacity = useTransform(pullY, [0, pullMaxDistance], [1, 0.2]);
-
-  const introProps = introActive
-    ? {
-        initial: { opacity: 0, y: 16 },
-        animate: { opacity: 1, y: 0 },
-        transition: {
-          delay: introBaseDelay + index * introStagger,
-          duration: introDuration,
-          ease: [0.25, 0.46, 0.45, 0.94],
-        },
-      }
-    : {};
-
-  const extraProps = !introActive && fadeInExtra
-    ? {
-        initial: { opacity: 0 },
-        animate: { opacity: 1 },
-        transition: { duration: 0.4, ease: "easeOut" },
-      }
-    : {};
-
-  return (
-    <motion.span
-      key={`${char}-${index}`}
-      className="inline-flex font-light"
-      style={{
-        y: introActive ? undefined : y,
-        rotate: introActive ? undefined : rotate,
-        opacity: introActive ? undefined : opacity,
-        willChange: "transform",
-        transform: "translateZ(0)",
-        backfaceVisibility: "hidden",
-        transformStyle: "preserve-3d",
-      }}
-      {...introProps}
-      {...extraProps}
-    >
-      {char === " " ? "\u00A0" : char}
-    </motion.span>
-  );
-}
+import { PROMPTS, STARTER_CHIPS } from "@/features/create-idea/constants/prompts";
+import {
+  cursorFadeRange,
+  gatherSpring,
+  introBaseDelay,
+  introDuration,
+  introStagger,
+  pullMaxDistance,
+} from "@/features/create-idea/constants/animation";
+import { BreathingCursor } from "@/features/create-idea/components/BreathingCursor";
+import { ScrabbleChar } from "@/features/create-idea/components/ScrabbleChar";
+import { generatePrompts } from "@/features/create-idea/lib/generatePrompts";
+import { expandScatterTargets, generateScatterTargets } from "@/features/create-idea/lib/scatterTargets";
+import { useBodyScrollLock } from "@/features/create-idea/hooks/useBodyScrollLock";
+import { useKeyboardOffset } from "@/features/create-idea/hooks/useKeyboardOffset";
+import { useLockedViewportHeight } from "@/features/create-idea/hooks/useLockedViewportHeight";
+import { useComposerCaretVisibility } from "@/features/create-idea/hooks/useComposerCaretVisibility";
+import type { MusePrompt, ScatterTarget } from "@/features/create-idea/types";
 
 export default function Home() {
   const [promptIndex, setPromptIndex] = useState(0);
@@ -218,8 +35,6 @@ export default function Home() {
   );
   const [newCharStartIndex, setNewCharStartIndex] = useState<number | null>(null);
   const [introActive, setIntroActive] = useState(true);
-  const [lockedHeight, setLockedHeight] = useState<number | null>(null);
-  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [isReturningHome, setIsReturningHome] = useState(false);
   const [musePrompts, setMusePrompts] = useState<MusePrompt[]>(() =>
     generatePrompts(""),
@@ -234,6 +49,8 @@ export default function Home() {
   const pullOpacity = useTransform(pullY, [0, 80], [1, 0.3]);
   const cursorOpacity = useTransform(pullY, cursorFadeRange, [1, 0]);
   const skipScatterSyncRef = useRef(false);
+  const keyboardOffset = useKeyboardOffset(isComposer);
+  const lockedHeight = useLockedViewportHeight(isComposer);
 
   const currentPrompt = PROMPTS[promptIndex];
   const promptChars = currentPrompt.split("");
@@ -243,14 +60,6 @@ export default function Home() {
   );
 
   const hasUserTyped = inputValue.length > currentPrompt.length;
-
-  const focusComposerInput = useCallback(() => {
-    if (!textareaRef.current) return;
-    textareaRef.current.focus({ preventScroll: true });
-    const len = textareaRef.current.value.length;
-    textareaRef.current.selectionStart = len;
-    textareaRef.current.selectionEnd = len;
-  }, []);
 
   const dismissComposerKeyboard = useCallback(() => {
     textareaRef.current?.blur();
@@ -447,62 +256,14 @@ export default function Home() {
       textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
     }
   }, [inputValue]);
-
-  useEffect(() => {
-    if (!isComposer) return;
-    const previousBodyOverflow = document.body.style.overflow;
-    const previousHtmlOverflow = document.documentElement.style.overflow;
-    const previousBodyPosition = document.body.style.position;
-    const previousBodyWidth = document.body.style.width;
-    const previousBodyTop = document.body.style.top;
-    const scrollY = window.scrollY;
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.width = "100%";
-    document.body.style.top = `-${scrollY}px`;
-    return () => {
-      document.body.style.overflow = previousBodyOverflow;
-      document.documentElement.style.overflow = previousHtmlOverflow;
-      document.body.style.position = previousBodyPosition;
-      document.body.style.width = previousBodyWidth;
-      document.body.style.top = previousBodyTop;
-      window.scrollTo(0, scrollY);
-    };
-  }, [isComposer]);
-
-  useEffect(() => {
-    if (!isComposer) {
-      setKeyboardOffset(0);
-      return;
-    }
-    const updateOffset = () => {
-      const vv = window.visualViewport;
-      if (!vv) {
-        setKeyboardOffset(0);
-        return;
-      }
-      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      setKeyboardOffset(offset);
-    };
-    updateOffset();
-    window.visualViewport?.addEventListener("resize", updateOffset);
-    window.visualViewport?.addEventListener("scroll", updateOffset);
-    window.addEventListener("orientationchange", updateOffset);
-    return () => {
-      window.visualViewport?.removeEventListener("resize", updateOffset);
-      window.visualViewport?.removeEventListener("scroll", updateOffset);
-      window.removeEventListener("orientationchange", updateOffset);
-    };
-  }, [isComposer]);
-
-  useEffect(() => {
-    if (!isComposer) {
-      setLockedHeight(null);
-      return;
-    }
-    setLockedHeight(window.innerHeight);
-  }, [isComposer]);
+  useBodyScrollLock(isComposer);
+  useComposerCaretVisibility({
+    isComposer,
+    inputValue,
+    keyboardOffset,
+    composerScrollRef,
+    textareaRef,
+  });
 
   useEffect(() => {
     const previousBackground = document.body.style.backgroundColor;
@@ -530,24 +291,6 @@ export default function Home() {
     const timer = setTimeout(() => setIsReturningHome(false), 500);
     return () => clearTimeout(timer);
   }, [isReturningHome]);
-
-  useEffect(() => {
-    if (!isComposer) return;
-    const scrollEl = composerScrollRef.current;
-    const textareaEl = textareaRef.current;
-    if (!scrollEl || !textareaEl) return;
-    const raf = requestAnimationFrame(() => {
-      const caretBottom = textareaEl.offsetTop + textareaEl.offsetHeight;
-      const visibleBottom = scrollEl.scrollTop + scrollEl.clientHeight - (keyboardOffset + 96);
-      if (caretBottom > visibleBottom) {
-        scrollEl.scrollTo({
-          top: Math.max(0, caretBottom - scrollEl.clientHeight + keyboardOffset + 96),
-          behavior: "smooth",
-        });
-      }
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [inputValue, isComposer, keyboardOffset]);
 
   useEffect(() => {
     if (!showAIChips) return;
