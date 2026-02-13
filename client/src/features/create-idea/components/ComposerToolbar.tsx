@@ -75,7 +75,7 @@ export function ComposerToolbar({
             data-testid="button-finish"
             aria-label="Plant your idea"
           >
-            <span>Finish</span>
+            <span style={{ fontFamily: "'DM Sans', sans-serif" }}>Finish</span>
           </motion.button>
         )}
       </div>
