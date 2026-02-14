@@ -7,7 +7,7 @@ export const STYLE_TOKENS = {
     letterSpacing: "0px",
     willChange: "transform",
   } as const,
-  rightNowClass: "text-white font-medium leading-[120%] tracking-[-0.16px] mb-1",
+  rightNowClass: "text-white font-medium leading-[120%] tracking-[-0.16px] mb-0 pb-[10px]",
   rightNowStyle: {
     fontFamily: "'DM Sans', sans-serif",
     fontSize: "16px",

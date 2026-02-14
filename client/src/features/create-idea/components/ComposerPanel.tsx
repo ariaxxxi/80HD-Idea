@@ -12,6 +12,7 @@ type ComposerPanelProps = {
   keyboardOffset: number;
   hasUserTyped: boolean;
   showAIChips: boolean;
+  isLocked?: boolean;
   musePromptBatch: number;
   aiChipEnterDelay: number;
   musePrompts: MusePrompt[];
@@ -28,6 +29,7 @@ export function ComposerPanel({
   keyboardOffset,
   hasUserTyped,
   showAIChips,
+  isLocked = false,
   musePromptBatch,
   aiChipEnterDelay,
   musePrompts,
@@ -61,6 +63,7 @@ export function ComposerPanel({
               onChange={onInputChange}
               onFocus={onComposerInputInteract}
               onPointerDown={onComposerInputInteract}
+              readOnly={isLocked}
               className="w-full min-h-full bg-transparent text-white text-[24px] font-normal leading-relaxed tracking-[-0.24px] border-none outline-none focus:outline-none focus:ring-0 resize-none"
               style={{
                 fontFamily: "'Roboto Serif', serif",

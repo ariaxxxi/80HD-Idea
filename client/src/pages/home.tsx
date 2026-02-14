@@ -1,14 +1,16 @@
 import { AnimatePresence, motion } from "framer-motion";
-import bgImage from "@assets/Home_(1)_1770656113412.png";
 import moonImage from "@assets/moon.png";
+import homeCircleImage from "@assets/home-circle.png";
 import { HomePromptPanel } from "@/features/create-idea/components/HomePromptPanel";
 import { ComposerPanel } from "@/features/create-idea/components/ComposerPanel";
 import { ComposerToolbar } from "@/features/create-idea/components/ComposerToolbar";
+import { PostCaptureRitual } from "@/features/create-idea/components/PostCaptureRitual";
 import { useCreateIdeaFlow } from "@/features/create-idea/hooks/useCreateIdeaFlow";
 
 export default function Home() {
   const {
     isComposer,
+    isPostCaptureOpen,
     showAIChips,
     isReturningHome,
     keyboardOffset,
@@ -28,6 +30,10 @@ export default function Home() {
     musePrompts,
     musePromptBatch,
     aiChipEnterDelay,
+    postCaptureView,
+    wizardStep,
+    attributes,
+    isOrbLaunching,
     composerScrollRef,
     textareaRef,
     handleTapToCompose,
@@ -45,6 +51,13 @@ export default function Home() {
     handleOpenAiMode,
     handleCloseAiMode,
     handleRefreshAiPrompts,
+    handleFinishTap,
+    handleForkCaptureNow,
+    handleForkLetGlow,
+    handleForkBack,
+    handleWizardSelect,
+    handleWizardBack,
+    handleWizardNext,
   } = useCreateIdeaFlow();
 
   return (
@@ -63,15 +76,15 @@ export default function Home() {
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      <motion.img
-        src={bgImage}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-        animate={{ opacity: 0 }}
-        transition={{ duration: 0.4, ease: "easeInOut" }}
-        aria-hidden="true"
-        data-testid="bg-image"
-      />
+      {!isComposer && (
+        <img
+          src={homeCircleImage}
+          alt=""
+          className="absolute top-[-340px] left-[-10%] w-[720px] max-w-none opacity-0 pointer-events-none select-none z-10"
+          aria-hidden="true"
+          data-testid="home-circle-bg"
+        />
+      )}
 
       <div className="relative z-20 h-full">
         <AnimatePresence>
@@ -120,7 +133,7 @@ export default function Home() {
         </AnimatePresence>
 
         <AnimatePresence>
-          {isComposer && (
+          {isComposer && !isPostCaptureOpen && (
             <motion.button
               className="absolute top-4 left-4 z-30 text-muted-foreground"
               initial={{ opacity: 0 }}
@@ -163,6 +176,7 @@ export default function Home() {
               keyboardOffset={keyboardOffset}
               hasUserTyped={hasUserTyped}
               showAIChips={showAIChips}
+              isLocked={isPostCaptureOpen}
               musePromptBatch={musePromptBatch}
               aiChipEnterDelay={aiChipEnterDelay}
               musePrompts={musePrompts}
@@ -175,14 +189,41 @@ export default function Home() {
         </AnimatePresence>
 
         <AnimatePresence>
-          {isComposer && (
+          {isComposer && !isPostCaptureOpen && (
             <ComposerToolbar
               showAIChips={showAIChips}
               keyboardOffset={keyboardOffset}
               onOpenAiMode={handleOpenAiMode}
               onCloseAiMode={handleCloseAiMode}
               onRefreshAiPrompts={handleRefreshAiPrompts}
+              onFinish={handleFinishTap}
             />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isComposer && postCaptureView && (
+            <motion.div
+              key="post-capture-ritual"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+            >
+              <PostCaptureRitual
+                view={postCaptureView}
+                wizardStep={wizardStep}
+                attributes={attributes}
+                isOrbLaunching={isOrbLaunching}
+                sourceText={inputValue}
+                onForkBack={handleForkBack}
+                onForkCaptureNow={handleForkCaptureNow}
+                onForkLetGlow={handleForkLetGlow}
+                onWizardBack={handleWizardBack}
+                onWizardNext={handleWizardNext}
+                onWizardSelect={handleWizardSelect}
+              />
+            </motion.div>
           )}
         </AnimatePresence>
       </div>

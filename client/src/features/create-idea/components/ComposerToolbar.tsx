@@ -3,18 +3,22 @@ import { Sparkles, X, RefreshCw } from "lucide-react";
 
 type ComposerToolbarProps = {
   showAIChips: boolean;
+  disableFinish?: boolean;
   keyboardOffset: number;
   onOpenAiMode: () => void;
   onCloseAiMode: () => void;
   onRefreshAiPrompts: () => void;
+  onFinish: () => void;
 };
 
 export function ComposerToolbar({
   showAIChips,
+  disableFinish = false,
   keyboardOffset,
   onOpenAiMode,
   onCloseAiMode,
   onRefreshAiPrompts,
+  onFinish,
 }: ComposerToolbarProps) {
   return (
     <motion.div
@@ -72,6 +76,8 @@ export function ComposerToolbar({
           <motion.button
             className="flex items-center gap-2 px-5 h-11 rounded-3xl bg-white/10 text-white text-base font-semibold hover-elevate active-elevate-2 md:bg-primary md:text-primary-foreground"
             whileTap={{ scale: 0.95 }}
+            onClick={onFinish}
+            disabled={disableFinish}
             data-testid="button-finish"
             aria-label="Plant your idea"
           >
