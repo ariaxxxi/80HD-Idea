@@ -97,9 +97,9 @@ function BarsGlyph({ className = "h-4 w-4" }: { className?: string }) {
 function LeftGlyph() {
   return (
     <svg className="h-5 w-5 text-black" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="4" y="6" width="16" height="12" rx="3" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M8 12H12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M16 12H16.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M12 4L13.8 9.2L19 11L13.8 12.8L12 18L10.2 12.8L5 11L10.2 9.2L12 4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M18 4V7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M19.5 5.5H16.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }
@@ -107,10 +107,9 @@ function LeftGlyph() {
 function RightGlyph() {
   return (
     <svg className="h-5 w-5 text-black" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="9" cy="11" r="1" fill="currentColor" />
-      <circle cx="15" cy="11" r="1" fill="currentColor" />
-      <path d="M8.5 14.5C9.3 15.6 10.5 16.2 12 16.2C13.5 16.2 14.7 15.6 15.5 14.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <rect x="4" y="5.5" width="16" height="13" rx="2.5" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="9" cy="10" r="1.2" fill="currentColor" />
+      <path d="M6.5 16L10.2 12.3C10.5904 11.9096 11.2235 11.9096 11.6139 12.3L13.2 13.8861C13.5904 14.2765 14.2235 14.2765 14.6139 13.8861L15.7 12.8C16.0904 12.4096 16.7235 12.4096 17.1139 12.8L18.5 14.1861" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

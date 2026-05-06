@@ -214,9 +214,10 @@ export function PostCaptureRitual({
   }, [highlightedIndex, view]);
 
   return (
-    <div className="fixed inset-0 z-[95] flex flex-col bg-[#C3D0D5] px-6 pb-8 pt-16">
+    <div className="fixed inset-0 z-[95] flex flex-col overflow-hidden bg-[#C3D0D5] px-[30px] pb-8 pt-[60px]">
+      <div className="relative z-10 flex h-full flex-col">
       {view === "fork" && (
-        <div className="absolute left-4 top-4 z-10 text-black/70">
+        <div className="absolute left-[-14px] top-[-44px] z-10 text-black/70">
           <button
             type="button"
             className="grid h-10 w-10 place-items-center"
@@ -232,16 +233,16 @@ export function PostCaptureRitual({
       )}
 
       {view === "wizard" && (
-        <div className="absolute left-4 top-4 z-10">
+        <div className="absolute left-[-14px] top-[-44px] z-10">
           <button
             type="button"
-            className="grid h-10 w-10 place-items-center rounded-full bg-white/40 text-black"
+            className="grid h-10 w-10 place-items-center text-black"
             onClick={onWizardBack}
             data-testid="button-wizard-close"
             aria-label="Back"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M15 6L9 12L15 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>
@@ -257,7 +258,7 @@ export function PostCaptureRitual({
             exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.35, ease: "easeInOut" }}
           >
-            <div className="mt-24 flex flex-1 flex-col items-center justify-center">
+            <div className="mt-6 flex flex-1 flex-col items-center justify-center">
               {forkLabel && (
                 <p
                   className="text-[14px] leading-[1.2] text-black/70"
@@ -309,7 +310,7 @@ export function PostCaptureRitual({
             transition={{ duration: 0.25, ease: "easeInOut" }}
           >
             <div className="flex h-full flex-col">
-              <div className="mt-24 flex flex-col items-center">
+              <div className="mt-6 flex flex-col items-center">
                 {forkLabel && (
                   <p
                     className="text-[14px] leading-[1.2] text-black/70"
@@ -452,6 +453,7 @@ export function PostCaptureRitual({
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }
