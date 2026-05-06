@@ -1,5 +1,5 @@
 export const STYLE_TOKENS = {
-  promptHeadingClass: "text-[32px] font-normal text-white leading-[38.4px] tracking-[0] flex items-start",
+  promptHeadingClass: "text-[32px] font-normal text-black leading-[38.4px] tracking-[0] flex items-start",
   promptHeadingStyle: {
     fontFamily: "'Roboto Serif', serif",
     fontKerning: "none",
@@ -7,19 +7,17 @@ export const STYLE_TOKENS = {
     letterSpacing: "0px",
     willChange: "transform",
   } as const,
-  rightNowClass: "text-white font-medium leading-[120%] tracking-[-0.16px] mb-1",
+  rightNowClass: "text-black font-medium leading-[120%] tracking-[-0.16px] mb-1",
   rightNowStyle: {
     fontFamily: "'DM Sans', sans-serif",
     fontSize: "16px",
   } as const,
   starterChipButtonClass:
-    "inline-flex h-11 px-5 items-center justify-center rounded-3xl bg-white/10 hover:bg-white/20 transition-colors",
-  starterChipTextClass: "text-white font-medium text-base leading-[150%] tracking-[-0.176px]",
+    "inline-flex h-11 px-5 items-center justify-center rounded-3xl bg-white/40 hover:bg-white/50 transition-colors",
+  starterChipTextClass: "text-black/60 font-medium text-base leading-[150%] tracking-[-0.176px]",
   questionChipButtonClass:
-    "inline-flex h-12 px-5 items-center justify-center gap-2 rounded-3xl bg-[#101010] border border-white/15 backdrop-blur-[28px] backdrop-saturate-125 hover:bg-white/15 transition-colors",
-  questionChipGlowStyle: {
-    boxShadow: "0 0 24px rgba(255,255,255,0.12), 0 8px 24px rgba(0,0,0,0.22)",
-  } as const,
+    "inline-flex h-12 px-5 items-center justify-center gap-2 rounded-3xl bg-white border border-white/15 backdrop-blur-[28px] backdrop-saturate-125 hover:bg-white/90 transition-colors",
+  questionChipGlowStyle: {} as const,
   questionChipTapStyle: {
     scale: 0.98,
     backgroundColor: "rgba(255,255,255,0.2)",

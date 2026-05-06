@@ -43,7 +43,7 @@ export function useCreateIdeaFlow() {
     generatePrompts(""),
   );
   const [musePromptBatch, setMusePromptBatch] = useState(0);
-  const [aiChipEnterDelay, setAiChipEnterDelay] = useState(2);
+  const [aiChipEnterDelay, setAiChipEnterDelay] = useState(1);
   const [postCaptureView, setPostCaptureView] = useState<PostCaptureView | null>(null);
   const [wizardStep, setWizardStep] = useState<0 | 1 | 2>(0);
   const [attributes, setAttributes] = useState<IdeaAttributes>(DEFAULT_IDEA_ATTRIBUTES);
@@ -263,7 +263,7 @@ export function useCreateIdeaFlow() {
     if (isPostCaptureOpen) return;
     setMusePrompts(generatePrompts(inputValue));
     setMusePromptBatch((prev) => prev + 1);
-    setAiChipEnterDelay(2);
+    setAiChipEnterDelay(1);
     dispatchComposer({ type: "OPEN_AI" });
     setTimeout(() => dismissComposerKeyboard(), 0);
   }, [dismissComposerKeyboard, inputValue, isPostCaptureOpen]);

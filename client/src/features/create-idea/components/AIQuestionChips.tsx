@@ -25,7 +25,7 @@ export function AIQuestionChips({
       {visible && (
         <motion.div
           key={`muse-batch-${batchKey}`}
-          className="fixed left-0 right-0 z-[70] flex flex-col items-center gap-4 px-6"
+          className="fixed left-0 right-0 z-[55] flex flex-col items-center gap-6 px-6"
           style={{ bottom: `${keyboardOffset + 102}px` }}
           initial="hidden"
           animate="visible"
@@ -62,9 +62,9 @@ export function AIQuestionChips({
               onClick={() => onQuestionChipTap(chip.insert)}
               data-testid={`chip-question-${chip.id}`}
             >
-              <Sparkles className="w-3.5 h-3.5 shrink-0 text-white/85" />
+              <Sparkles className="w-3.5 h-3.5 shrink-0 text-black" />
               <span
-                className="text-white/95 font-medium text-base italic leading-[150%] tracking-[-0.176px]"
+                className="text-black font-medium text-base italic leading-[150%] tracking-[-0.176px]"
                 style={{ fontFamily: "'DM Sans', sans-serif" }}
               >
                 {chip.label}

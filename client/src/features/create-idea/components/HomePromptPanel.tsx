@@ -96,7 +96,7 @@ function BarsGlyph({ className = "h-4 w-4" }: { className?: string }) {
 
 function LeftGlyph() {
   return (
-    <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg className="h-5 w-5 text-black" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <rect x="4" y="6" width="16" height="12" rx="3" stroke="currentColor" strokeWidth="1.6" />
       <path d="M8 12H12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       <path d="M16 12H16.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -106,7 +106,7 @@ function LeftGlyph() {
 
 function RightGlyph() {
   return (
-    <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg className="h-5 w-5 text-black" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" />
       <circle cx="9" cy="11" r="1" fill="currentColor" />
       <circle cx="15" cy="11" r="1" fill="currentColor" />
@@ -134,7 +134,7 @@ export function HomePromptPanel({
       <AnimatePresence>
         {showPullHint && (
           <motion.div
-            className="absolute top-4 left-0 w-full flex flex-col items-center gap-1 text-center text-xs tracking-[0.08em] uppercase text-white/55 pointer-events-none"
+            className="absolute top-4 left-0 w-full flex flex-col items-center gap-1 text-center text-xs tracking-[0.08em] uppercase text-black/55 pointer-events-none"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: [0, 2, 0] }}
             exit={{ opacity: 0, y: -10 }}
@@ -206,14 +206,14 @@ export function HomePromptPanel({
       <div className="absolute inset-x-0 bottom-[136px] z-10 flex items-center justify-center gap-7 px-6">
         <button
           type="button"
-          className="h-12 w-12 rounded-full bg-white/10 grid place-items-center text-white"
+          className="h-12 w-12 rounded-full bg-white/40 grid place-items-center text-black"
           aria-label="Quick action"
         >
           <LeftGlyph />
         </button>
         <button
           type="button"
-          className="h-[79px] w-[79px] rounded-full bg-white/10 grid place-items-center text-white"
+          className="h-[79px] w-[79px] rounded-full bg-white/40 grid place-items-center text-black"
           onClick={onTapToCompose}
           aria-label="Create idea"
           data-testid="home-fab-compose"
@@ -222,7 +222,7 @@ export function HomePromptPanel({
         </button>
         <button
           type="button"
-          className="h-12 w-12 rounded-full bg-white/10 grid place-items-center text-white"
+          className="h-12 w-12 rounded-full bg-white/40 grid place-items-center text-black"
           aria-label="Mood action"
         >
           <RightGlyph />

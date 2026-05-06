@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import bg1Image from "@assets/bg1.png";
 import bg2Image from "@assets/bg2.png";
-import moonImage from "@assets/moon.png";
+import aiGlowImage from "@assets/ai-glow.png";
 import { HomePromptPanel } from "@/features/create-idea/components/HomePromptPanel";
 import { ComposerPanel } from "@/features/create-idea/components/ComposerPanel";
 import { ComposerToolbar } from "@/features/create-idea/components/ComposerToolbar";
@@ -101,53 +101,25 @@ export default function Home() {
       <div className="relative z-20 h-full">
         <AnimatePresence>
           {isComposer && showAIChips && (
-            <div className="absolute inset-x-0 bottom-0 z-[60] flex justify-center pointer-events-none">
-              <motion.div
-                key="ai-mode-moon-blur"
-                className="absolute rounded-full bg-white/20 blur-[80px]"
-                initial={{ width: 90, height: 90, y: 300 }}
-                animate={{ width: 700, height: 700, y: 270 }}
-                exit={{
-                  width: 90,
-                  height: 90,
-                  y: 300,
-                  transition: { duration: 1.2, ease: [0.6, 0, 0.4, 1] },
-                }}
-                transition={{
-                  duration: 2,
-                  ease: [0.64, 0, 0.5, 1],
-                }}
-                aria-hidden="true"
-                data-testid="ai-mode-moon-blur"
-              />
-              <motion.img
-                key="ai-mode-moon"
-                src={moonImage}
-                alt=""
-                className="pointer-events-none max-w-none"
-                initial={{ width: 90, height: 90, y: 300 }}
-                animate={{ width: 700, height: 700, y: 270 }}
-                exit={{
-                  width: 90,
-                  height: 90,
-                  y: 300,
-                  transition: { duration: 1.2, ease: [0.6, 0, 0.4, 1] },
-                }}
-                transition={{
-                  duration: 2,
-                  ease: [0.64, 0, 0.5, 1],
-                }}
-                aria-hidden="true"
-                data-testid="ai-mode-moon"
-              />
-            </div>
+            <motion.img
+              key="ai-mode-bg"
+              src={aiGlowImage}
+              alt=""
+              className="absolute inset-0 z-10 h-full w-full object-cover pointer-events-none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.2, ease: "easeInOut" }}
+              aria-hidden="true"
+              data-testid="bg-image-ai-mode"
+            />
           )}
         </AnimatePresence>
 
         <AnimatePresence>
           {isComposer && !isPostCaptureOpen && (
             <motion.button
-              className="absolute top-4 left-4 z-30 text-muted-foreground"
+              className="absolute top-4 left-4 z-30 text-black"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -180,7 +152,7 @@ export default function Home() {
             />
           )}
 
-          {isComposer && (
+          {isComposer && !postCaptureView && (
             <ComposerPanel
               composerScrollRef={composerScrollRef}
               textareaRef={textareaRef}

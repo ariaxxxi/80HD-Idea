@@ -33,7 +33,7 @@ export function ComposerToolbar({
       <div className="flex items-center justify-between px-4 py-3 bg-transparent border-t border-transparent md:bg-background/80 md:dark:bg-background/70 md:border-border/50">
         {!showAIChips && (
           <motion.button
-            className="flex items-center justify-center w-12 h-12 rounded-3xl bg-white/10 text-white hover-elevate active-elevate-2 md:bg-transparent md:text-primary"
+            className="flex items-center justify-center w-12 h-12 rounded-3xl bg-white/40 text-black hover-elevate active-elevate-2 md:bg-transparent md:text-primary"
             whileTap={{ scale: 0.92 }}
             onMouseDown={(e) => e.preventDefault()}
             onTouchStart={(e) => e.preventDefault()}
@@ -48,7 +48,7 @@ export function ComposerToolbar({
         {showAIChips && (
           <div className="absolute left-1/2 -translate-x-1/2 -translate-y-[30px] flex items-center gap-4">
             <motion.button
-              className="flex items-center justify-center w-12 h-12 rounded-3xl bg-black/10 text-black hover-elevate active-elevate-2"
+              className="flex items-center justify-center w-12 h-12 rounded-3xl bg-white/40 text-black hover-elevate active-elevate-2"
               whileTap={{ scale: 0.92 }}
               onMouseDown={(e) => e.preventDefault()}
               onTouchStart={(e) => e.preventDefault()}
@@ -56,10 +56,10 @@ export function ComposerToolbar({
               data-testid="button-ai-close"
               aria-label="Close AI mode"
             >
-              <X className="w-4 h-4" strokeWidth={2.6} />
+              <X className="w-4 h-4" />
             </motion.button>
             <motion.button
-              className="flex items-center justify-center w-12 h-12 rounded-3xl bg-black/10 text-black hover-elevate active-elevate-2"
+              className="flex items-center justify-center w-12 h-12 rounded-3xl bg-white/40 text-black hover-elevate active-elevate-2"
               whileTap={{ scale: 0.92 }}
               onMouseDown={(e) => e.preventDefault()}
               onTouchStart={(e) => e.preventDefault()}
@@ -67,14 +67,14 @@ export function ComposerToolbar({
               data-testid="button-ai-refresh"
               aria-label="Refresh AI prompts"
             >
-              <RefreshCw className="w-4 h-4" strokeWidth={2.6} />
+              <RefreshCw className="w-4 h-4" />
             </motion.button>
           </div>
         )}
 
         {!showAIChips && (
           <motion.button
-            className="flex items-center gap-2 px-5 h-11 rounded-3xl bg-white/10 text-white text-base font-semibold hover-elevate active-elevate-2 md:bg-primary md:text-primary-foreground"
+            className="flex items-center gap-2 px-5 h-11 rounded-3xl bg-white/40 text-black text-base font-semibold hover-elevate active-elevate-2 md:bg-primary md:text-primary-foreground"
             whileTap={{ scale: 0.95 }}
             onClick={onFinish}
             disabled={disableFinish}

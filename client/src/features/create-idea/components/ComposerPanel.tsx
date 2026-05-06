@@ -62,7 +62,7 @@ export function ComposerPanel({
               onFocus={onComposerInputInteract}
               onPointerDown={onComposerInputInteract}
               readOnly={isLocked}
-              className="w-full min-h-full bg-transparent text-white text-[24px] font-normal leading-relaxed tracking-[-0.24px] border-none outline-none focus:outline-none focus:ring-0 resize-none"
+              className="w-full min-h-full bg-transparent text-black text-[24px] font-normal leading-relaxed tracking-[-0.24px] border-none outline-none focus:outline-none focus:ring-0 resize-none"
               style={{
                 fontFamily: "'Roboto Serif', serif",
                 scrollPaddingBottom: `${keyboardOffset + 120}px`,
