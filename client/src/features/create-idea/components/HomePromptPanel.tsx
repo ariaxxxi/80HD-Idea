@@ -82,6 +82,39 @@ function PromptLine({
   );
 }
 
+function BarsGlyph({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 11V13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M8 8V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M12 5V19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M16 8V16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M20 11V13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function LeftGlyph() {
+  return (
+    <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="4" y="6" width="16" height="12" rx="3" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8 12H12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M16 12H16.01" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function RightGlyph() {
+  return (
+    <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="8" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="9" cy="11" r="1" fill="currentColor" />
+      <circle cx="15" cy="11" r="1" fill="currentColor" />
+      <path d="M8.5 14.5C9.3 15.6 10.5 16.2 12 16.2C13.5 16.2 14.7 15.6 15.5 14.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function HomePromptPanel({
   isReturningHome,
   showPullHint,
@@ -169,6 +202,32 @@ export function HomePromptPanel({
           />
         </>
       )}
+
+      <div className="absolute inset-x-0 bottom-[136px] z-10 flex items-center justify-center gap-7 px-6">
+        <button
+          type="button"
+          className="h-12 w-12 rounded-full bg-white/10 grid place-items-center text-white"
+          aria-label="Quick action"
+        >
+          <LeftGlyph />
+        </button>
+        <button
+          type="button"
+          className="h-[79px] w-[79px] rounded-full bg-white/10 grid place-items-center text-white"
+          onClick={onTapToCompose}
+          aria-label="Create idea"
+          data-testid="home-fab-compose"
+        >
+          <BarsGlyph className="h-8 w-8" />
+        </button>
+        <button
+          type="button"
+          className="h-12 w-12 rounded-full bg-white/10 grid place-items-center text-white"
+          aria-label="Mood action"
+        >
+          <RightGlyph />
+        </button>
+      </div>
     </motion.div>
   );
 }

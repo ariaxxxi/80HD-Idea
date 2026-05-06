@@ -1,14 +1,17 @@
 import { AnimatePresence, motion } from "framer-motion";
-import bgImage from "@assets/Home_(1)_1770656113412.png";
+import bg1Image from "@assets/bg1.png";
+import bg2Image from "@assets/bg2.png";
 import moonImage from "@assets/moon.png";
 import { HomePromptPanel } from "@/features/create-idea/components/HomePromptPanel";
 import { ComposerPanel } from "@/features/create-idea/components/ComposerPanel";
 import { ComposerToolbar } from "@/features/create-idea/components/ComposerToolbar";
+import { PostCaptureRitual } from "@/features/create-idea/components/PostCaptureRitual";
 import { useCreateIdeaFlow } from "@/features/create-idea/hooks/useCreateIdeaFlow";
 
 export default function Home() {
   const {
     isComposer,
+    isPostCaptureOpen,
     showAIChips,
     isReturningHome,
     keyboardOffset,
@@ -28,6 +31,10 @@ export default function Home() {
     musePrompts,
     musePromptBatch,
     aiChipEnterDelay,
+    postCaptureView,
+    wizardStep,
+    attributes,
+    isOrbLaunching,
     composerScrollRef,
     textareaRef,
     handleTapToCompose,
@@ -45,11 +52,18 @@ export default function Home() {
     handleOpenAiMode,
     handleCloseAiMode,
     handleRefreshAiPrompts,
+    handleFinishTap,
+    handleForkCaptureNow,
+    handleForkLetGlow,
+    handleForkBack,
+    handleWizardSelect,
+    handleWizardBack,
+    handleWizardNext,
   } = useCreateIdeaFlow();
 
   return (
     <div
-      className="relative w-full h-screen overflow-hidden bg-[#101010]"
+      className="relative w-full h-screen overflow-hidden bg-[#C3D0D5]"
       style={{
         touchAction: isComposer ? "auto" : "none",
         height: lockedHeight ? `${lockedHeight}px` : "100vh",
@@ -63,15 +77,26 @@ export default function Home() {
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      <motion.img
-        src={bgImage}
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-        animate={{ opacity: 0 }}
-        transition={{ duration: 0.4, ease: "easeInOut" }}
-        aria-hidden="true"
-        data-testid="bg-image"
-      />
+      <div className="absolute inset-0 pointer-events-none">
+        <motion.img
+          src={bg1Image}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          animate={{ opacity: isComposer ? 0 : 1 }}
+          transition={{ duration: 0.45, ease: "easeInOut" }}
+          aria-hidden="true"
+          data-testid="bg-image-home"
+        />
+        <motion.img
+          src={bg2Image}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          animate={{ opacity: isComposer ? 1 : 0 }}
+          transition={{ duration: 0.45, ease: "easeInOut" }}
+          aria-hidden="true"
+          data-testid="bg-image-composer"
+        />
+      </div>
 
       <div className="relative z-20 h-full">
         <AnimatePresence>
@@ -120,7 +145,7 @@ export default function Home() {
         </AnimatePresence>
 
         <AnimatePresence>
-          {isComposer && (
+          {isComposer && !isPostCaptureOpen && (
             <motion.button
               className="absolute top-4 left-4 z-30 text-muted-foreground"
               initial={{ opacity: 0 }}
@@ -163,6 +188,7 @@ export default function Home() {
               keyboardOffset={keyboardOffset}
               hasUserTyped={hasUserTyped}
               showAIChips={showAIChips}
+              isLocked={isPostCaptureOpen}
               musePromptBatch={musePromptBatch}
               aiChipEnterDelay={aiChipEnterDelay}
               musePrompts={musePrompts}
@@ -175,14 +201,41 @@ export default function Home() {
         </AnimatePresence>
 
         <AnimatePresence>
-          {isComposer && (
+          {isComposer && !isPostCaptureOpen && (
             <ComposerToolbar
               showAIChips={showAIChips}
               keyboardOffset={keyboardOffset}
               onOpenAiMode={handleOpenAiMode}
               onCloseAiMode={handleCloseAiMode}
               onRefreshAiPrompts={handleRefreshAiPrompts}
+              onFinish={handleFinishTap}
             />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {isComposer && postCaptureView && (
+            <motion.div
+              key="post-capture-ritual"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+            >
+              <PostCaptureRitual
+                view={postCaptureView}
+                wizardStep={wizardStep}
+                attributes={attributes}
+                isOrbLaunching={isOrbLaunching}
+                sourceText={inputValue}
+                onForkBack={handleForkBack}
+                onForkCaptureNow={handleForkCaptureNow}
+                onForkLetGlow={handleForkLetGlow}
+                onWizardBack={handleWizardBack}
+                onWizardNext={handleWizardNext}
+                onWizardSelect={handleWizardSelect}
+              />
+            </motion.div>
           )}
         </AnimatePresence>
       </div>

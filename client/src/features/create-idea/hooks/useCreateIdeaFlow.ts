@@ -16,7 +16,16 @@ import { useKeyboardOffset } from "./useKeyboardOffset";
 import { useLockedViewportHeight } from "./useLockedViewportHeight";
 import { useComposerCaretVisibility } from "./useComposerCaretVisibility";
 import { ideaComposerReducer, initialIdeaComposerState } from "../state/ideaComposerReducer";
-import type { MusePrompt, ScatterTarget } from "../types";
+import { DEFAULT_IDEA_ATTRIBUTES } from "../constants/postCapture";
+import type { IdeaAttributes, MusePrompt, PostCaptureView, ScatterTarget } from "../types";
+
+type CapturedIdea = {
+  id: string;
+  text: string;
+  status: "inbox" | "glow";
+  attributes: IdeaAttributes;
+  createdAt: string;
+};
 
 export function useCreateIdeaFlow() {
   const [promptIndex, setPromptIndex] = useState(0);
@@ -35,6 +44,10 @@ export function useCreateIdeaFlow() {
   );
   const [musePromptBatch, setMusePromptBatch] = useState(0);
   const [aiChipEnterDelay, setAiChipEnterDelay] = useState(2);
+  const [postCaptureView, setPostCaptureView] = useState<PostCaptureView | null>(null);
+  const [wizardStep, setWizardStep] = useState<0 | 1 | 2>(0);
+  const [attributes, setAttributes] = useState<IdeaAttributes>(DEFAULT_IDEA_ATTRIBUTES);
+  const [isOrbLaunching, setIsOrbLaunching] = useState(false);
   const [composerState, dispatchComposer] = useReducer(
     ideaComposerReducer,
     initialIdeaComposerState,
@@ -63,12 +76,43 @@ export function useCreateIdeaFlow() {
   );
 
   const hasUserTyped = inputValue.length > currentPrompt.length;
+  const isPostCaptureOpen = postCaptureView !== null;
 
   const dismissComposerKeyboard = useCallback(() => {
     textareaRef.current?.blur();
     const activeEl = document.activeElement as HTMLElement | null;
     activeEl?.blur?.();
   }, []);
+
+  const persistIdea = useCallback((idea: Omit<CapturedIdea, "id" | "createdAt">) => {
+    const record: CapturedIdea = {
+      ...idea,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      const raw = localStorage.getItem("captured-ideas");
+      const existing = raw ? (JSON.parse(raw) as CapturedIdea[]) : [];
+      localStorage.setItem("captured-ideas", JSON.stringify([record, ...existing]));
+    } catch {
+      // Keep flow resilient if storage is unavailable.
+    }
+  }, []);
+
+  const resetPostCaptureState = useCallback(() => {
+    setPostCaptureView(null);
+    setWizardStep(0);
+    setAttributes(DEFAULT_IDEA_ATTRIBUTES);
+    setIsOrbLaunching(false);
+  }, []);
+
+  const closeComposerToHome = useCallback(() => {
+    dispatchComposer({ type: "CLOSE_COMPOSER" });
+    setInputValue("");
+    setShowCursor(true);
+    resetPostCaptureState();
+  }, [resetPostCaptureState]);
 
   const handleTapToCompose = useCallback(() => {
     if (isComposer) return;
@@ -85,10 +129,8 @@ export function useCreateIdeaFlow() {
   }, [isComposer, currentPrompt]);
 
   const handleBack = useCallback(() => {
-    dispatchComposer({ type: "CLOSE_COMPOSER" });
-    setInputValue("");
-    setShowCursor(true);
-  }, []);
+    closeComposerToHome();
+  }, [closeComposerToHome]);
 
   const cyclePrompt = useCallback(() => {
     const nextIndex = (promptIndex + 1) % PROMPTS.length;
@@ -218,12 +260,13 @@ export function useCreateIdeaFlow() {
   }, []);
 
   const handleOpenAiMode = useCallback(() => {
+    if (isPostCaptureOpen) return;
     setMusePrompts(generatePrompts(inputValue));
     setMusePromptBatch((prev) => prev + 1);
     setAiChipEnterDelay(2);
     dispatchComposer({ type: "OPEN_AI" });
     setTimeout(() => dismissComposerKeyboard(), 0);
-  }, [dismissComposerKeyboard, inputValue]);
+  }, [dismissComposerKeyboard, inputValue, isPostCaptureOpen]);
 
   const handleCloseAiMode = useCallback(() => {
     dispatchComposer({ type: "CLOSE_AI" });
@@ -260,12 +303,86 @@ export function useCreateIdeaFlow() {
   }, [showAIChips]);
 
   const handleInputChange = useCallback((e: ChangeEvent<HTMLTextAreaElement>) => {
+    if (isPostCaptureOpen) return;
     const val = e.target.value;
     setInputValue(val);
     if (val.length > currentPrompt.length) {
       dispatchComposer({ type: "CLOSE_AI" });
     }
-  }, [currentPrompt]);
+  }, [currentPrompt, isPostCaptureOpen]);
+
+  const handleFinishTap = useCallback(() => {
+    if (!isComposer) return;
+    dispatchComposer({ type: "CLOSE_AI" });
+    setAttributes(DEFAULT_IDEA_ATTRIBUTES);
+    setWizardStep(0);
+    setIsOrbLaunching(false);
+    setPostCaptureView("fork");
+    dismissComposerKeyboard();
+  }, [dismissComposerKeyboard, isComposer]);
+
+  const handleForkCaptureNow = useCallback(() => {
+    persistIdea({
+      text: inputValue.trim(),
+      status: "inbox",
+      attributes: DEFAULT_IDEA_ATTRIBUTES,
+    });
+    closeComposerToHome();
+  }, [closeComposerToHome, inputValue, persistIdea]);
+
+  const handleForkLetGlow = useCallback(() => {
+    setWizardStep(0);
+    setPostCaptureView("wizard");
+  }, []);
+
+  const handleForkBack = useCallback(() => {
+    resetPostCaptureState();
+    requestAnimationFrame(() => {
+      if (!textareaRef.current) return;
+      textareaRef.current.focus({ preventScroll: true });
+      const len = textareaRef.current.value.length;
+      textareaRef.current.selectionStart = len;
+      textareaRef.current.selectionEnd = len;
+    });
+  }, [resetPostCaptureState]);
+
+  const handleWizardSelect = useCallback((value: string) => {
+    if (wizardStep === 0) {
+      setAttributes((prev) => ({ ...prev, energy: value as IdeaAttributes["energy"] }));
+      return;
+    }
+    if (wizardStep === 1) {
+      setAttributes((prev) => ({ ...prev, role: value as IdeaAttributes["role"] }));
+      return;
+    }
+    setAttributes((prev) => ({ ...prev, proximity: value as IdeaAttributes["proximity"] }));
+  }, [wizardStep]);
+
+  const handleWizardBack = useCallback(() => {
+    if (wizardStep === 0) {
+      setPostCaptureView("fork");
+      return;
+    }
+    setWizardStep((prev) => (prev - 1) as 0 | 1 | 2);
+  }, [wizardStep]);
+
+  const handleWizardNext = useCallback(() => {
+    if (wizardStep < 2) {
+      setWizardStep((prev) => (prev + 1) as 0 | 1 | 2);
+      return;
+    }
+
+    setIsOrbLaunching(true);
+    persistIdea({
+      text: inputValue.trim(),
+      status: "glow",
+      attributes,
+    });
+
+    setTimeout(() => {
+      closeComposerToHome();
+    }, 700);
+  }, [attributes, closeComposerToHome, inputValue, persistIdea, wizardStep]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -314,11 +431,13 @@ export function useCreateIdeaFlow() {
 
   useEffect(() => {
     if (!showAIChips) return;
+    if (isPostCaptureOpen) return;
     dismissComposerKeyboard();
-  }, [showAIChips, dismissComposerKeyboard]);
+  }, [showAIChips, dismissComposerKeyboard, isPostCaptureOpen]);
 
   return {
     isComposer,
+    isPostCaptureOpen,
     showAIChips,
     isReturningHome,
     keyboardOffset,
@@ -338,6 +457,10 @@ export function useCreateIdeaFlow() {
     musePrompts,
     musePromptBatch,
     aiChipEnterDelay,
+    postCaptureView,
+    wizardStep,
+    attributes,
+    isOrbLaunching,
     composerScrollRef,
     textareaRef,
     handleTapToCompose,
@@ -355,5 +478,12 @@ export function useCreateIdeaFlow() {
     handleOpenAiMode,
     handleCloseAiMode,
     handleRefreshAiPrompts,
+    handleFinishTap,
+    handleForkCaptureNow,
+    handleForkLetGlow,
+    handleForkBack,
+    handleWizardSelect,
+    handleWizardBack,
+    handleWizardNext,
   };
 }

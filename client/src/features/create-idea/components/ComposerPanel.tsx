@@ -12,6 +12,7 @@ type ComposerPanelProps = {
   keyboardOffset: number;
   hasUserTyped: boolean;
   showAIChips: boolean;
+  isLocked?: boolean;
   musePromptBatch: number;
   aiChipEnterDelay: number;
   musePrompts: MusePrompt[];
@@ -28,6 +29,7 @@ export function ComposerPanel({
   keyboardOffset,
   hasUserTyped,
   showAIChips,
+  isLocked = false,
   musePromptBatch,
   aiChipEnterDelay,
   musePrompts,
@@ -47,8 +49,6 @@ export function ComposerPanel({
             scrollPaddingBottom: `${keyboardOffset + 120}px`,
           }}
         >
-          <div className="pointer-events-none absolute top-0 left-0 w-full h-8 bg-gradient-to-b from-[#101010] to-transparent z-10" />
-
           <motion.div
             layoutId="prompt-line"
             layout="position"
@@ -61,6 +61,7 @@ export function ComposerPanel({
               onChange={onInputChange}
               onFocus={onComposerInputInteract}
               onPointerDown={onComposerInputInteract}
+              readOnly={isLocked}
               className="w-full min-h-full bg-transparent text-white text-[24px] font-normal leading-relaxed tracking-[-0.24px] border-none outline-none focus:outline-none focus:ring-0 resize-none"
               style={{
                 fontFamily: "'Roboto Serif', serif",

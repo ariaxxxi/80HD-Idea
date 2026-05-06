@@ -14,7 +14,7 @@ export const STYLE_TOKENS = {
   } as const,
   starterChipButtonClass:
     "inline-flex h-11 px-5 items-center justify-center rounded-3xl bg-white/10 hover:bg-white/20 transition-colors",
-  starterChipTextClass: "text-white/50 font-medium text-base leading-[150%] tracking-[-0.176px]",
+  starterChipTextClass: "text-white font-medium text-base leading-[150%] tracking-[-0.176px]",
   questionChipButtonClass:
     "inline-flex h-12 px-5 items-center justify-center gap-2 rounded-3xl bg-[#101010] border border-white/15 backdrop-blur-[28px] backdrop-saturate-125 hover:bg-white/15 transition-colors",
   questionChipGlowStyle: {
